@@ -15,26 +15,11 @@
         <div class="container">
             <div class="row" id="header">
                 <h3><a href="../">~/blog</a></h3>
-                <!--
-                    <div id="header">
-                    <div id="logo">
-                    <a href="/">~/blog</a>
-                    </div>
-                    <div id="navigation">
-                    <a href="/">Home</a>
-                    <a href="/about.html">About</a>
-                    <a href="/contact.html">Contact</a>
-                    <a href="/archive.html">Archive</a>
-                    </div>
-                    </div>
-                -->
             </div>
             <div class="row">
+                <h4>Sudoku Solver</h4>
                 <div id="content" class="twelve columns">
-                    <h4>Sudoku Solver</h4>
-
-                    
-<p>This post presents a method to solve 9x9 sudoku, using recursion and backtracking.</p>
+                    <p>This post presents a method to solve 9x9 sudoku, using recursion and backtracking.</p>
 <p>A board consist 9x9 grid of cells which stores the value at the cell, and a boolean fixed, which stores if the cell’s value is fixed, or modifiable. A cell’s value being 0 indicates that its empty. A legal value is a value that has not occured in the row, column, and 3x3 internal square of a cell.</p>
 <p>We start from the first cell putting a legal value in the current cell if its not fixed and recursively trying putting legal values in the next cells. If the assumed value is not correct, then at some point in the recursion, we’re bound to come across a state, where we’re unable to produce any legal value to put in the cell. We return failure, at this point and backtrack to the last non-failure cell, try putting another legal value, recurse again trying to put values in the next cell. If we’re able to put a legal value in the last cell, it means we’ve solved the sudoku puzzle. At this point we’ll return success.</p>
 <p>The below code uses this naive method to solve a 9x9 puzzle. To test the code’s correctness, the main function is written to produce the solution to <a href="https://projecteuler.net/problem=96">Problem 96</a>, in Project Euler(Yes, that’s how I normally quick test correctness). The code is written compromising size for simplicity.</p>

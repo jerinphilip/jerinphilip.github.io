@@ -15,26 +15,11 @@
         <div class="container">
             <div class="row" id="header">
                 <h3><a href="../">~/blog</a></h3>
-                <!--
-                    <div id="header">
-                    <div id="logo">
-                    <a href="/">~/blog</a>
-                    </div>
-                    <div id="navigation">
-                    <a href="/">Home</a>
-                    <a href="/about.html">About</a>
-                    <a href="/contact.html">Contact</a>
-                    <a href="/archive.html">Archive</a>
-                    </div>
-                    </div>
-                -->
             </div>
             <div class="row">
+                <h4>Mazes</h4>
                 <div id="content" class="twelve columns">
-                    <h4>Mazes</h4>
-
-                    
-<p>This post is all about creating mazes, and then solving them.</p>
+                    <p>This post is all about creating mazes, and then solving them.</p>
 <p>It all started with me looking for a new screensaver, xscreensaver giving me the option maze. I thought a little about creating something similar, found the difficulty not too high. The plan was to make it in CPP first, a language I’m reasonably comfortable with, then use HTML and JS to draw the proper maze and show the animations of Depth First Search solving the maze.</p>
 <h5 id="generation-of-the-maze">Generation of the Maze</h5>
 <p>We start with a rectangular grid. Each cell is not connected to any other. This can be modeled as a graph, G(V, E). In this model, we consider the cells to be the vertices, and the walls separating them to be the edges. Choose random vertices in the edges of the grid to be the start and end vertices. Now the problem reduces to finding a tree connecting the start vertex to the end vertex.</p>
