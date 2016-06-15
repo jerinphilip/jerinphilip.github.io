@@ -59,12 +59,7 @@ Final:  <span class="fl">0.011086285775082454</span></code></pre></div>
 <p>I have the code ready for training, I’m planning to add a feature to load and store the model, which here are the two tries. I also have to generate more data so that accuracy can be improved over time. The model once trained, can be used for inference in the sandhi-splitter module. I’m almost past the hard part. Splitting can be rule based for now, but I’m thinking of using a dictionary of root words which is feasible for the language, and implement something similar to the prediction feature in keyboards to fill in blanks, rather than identifying transforms.</p>
 <p>The file IO and the training script is python3 for now, I might have to replace it with codecs or something for python2.7 compatibility. Still clueless as to how to write tests for these.</p>
 <p>The necessary files can be found here: <a href="https://github.com/jerinphilip/sandhi-splitter">sandhi-splitter</a>.</p>
-<p>To test:</p>
-<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">virtualenv</span> env /usr/bin/python3
-<span class="kw">.</span> <span class="kw">env/bin/activate</span>
-<span class="kw">python3</span> setup.py install
-<span class="co"># python3 sandhisplitter/train.py &lt;training-data&gt; &lt;test-data&gt; &lt;depth-of-trie&gt; &lt;initial-skip&gt;</span>
-<span class="kw">python3</span> sandhisplitter/train.py data/ltrc_dataset data/testdata 6 1</code></pre></div>
+<p>Instructions are provided in the README of the repo.</p>
 <h1 id="possible-improvements">Possible Improvements</h1>
 <p>Instead of having an initial skip, we could assign weights to the probabilities, since counts being higher deeper in the tree is more weighted than the counts initially. Some smoothing is already enabled to capture patterns missing from training data, but its nowhere near perfect.</p>
 <div class="info">
