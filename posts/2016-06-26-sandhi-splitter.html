@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>~/blog - The sandhi-splitter module</title>
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" type="text/css" href="../css/normalize.css" />
+        <link rel="stylesheet" type="text/css" href="../css/skeleton.css" />
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0" />
+    </head>
+    <body>
+        <div class="container">
+            <div class="row" id="header">
+                <h1><a href="../">~/blog</a></h1>
+            </div>
+            <div class="row">
+                <h1 id="post-title">The sandhi-splitter module</h1>
+                <div id="content" class="twelve columns">
+                    <p>Another milestone of my Google Summer of Code coding period is close - end of the first coding period and mid term evaluations. And here is the log of the journey so far.</p>
+<h1 id="big-picture.">Big picture.</h1>
+<p>Given below is what was proposed as part of the sandhi-splitter module in my draft.</p>
+<div class="figure">
+<img src="../images/libindic-uml.png" alt="uml(sort of) - diagram" />
+<p class="caption">uml(sort of) - diagram</p>
+</div>
+<p>The <a href="../posts/2016-06-12-sandhi-split-point.html">previous post</a> was regarding the training, model and the split point classifications part in the module. The work done after that involves the postprocessor, integrating the components together and writing a few helper scripts for people who might want to extend this functionality to another language.</p>
+<p>A rough mapping of these to the source files in the <a href="https://github.com/jerinphilip/sandhi-splitter">repo</a> would be:</p>
+<ul>
+<li><code>sandhisplitter/</code>
+<ul>
+<li><code>models/*</code> - Stored models</li>
+<li><code>model.py</code> - Model object, to access stored models, uses trie.</li>
+<li><code>splitter.py</code> - Split Point Identification</li>
+<li><code>postprocessor.py</code> - Post Processing</li>
+<li><code>train.py</code> - Helper Script for the training part</li>
+<li><code>benchmark_model.py</code> - Helper script to determine performance</li>
+<li><code>trie.py</code> - The trie structure, used of model.</li>
+<li><code>util.py</code> - as the name suggests.</li>
+<li><code>__init__.py</code> - integrating multiple components through <code>Wrapper</code> class.</li>
+</ul></li>
+</ul>
+<p>The data is organized in the <code>data</code> folder and tests are in <code>sandhisplitter/tests</code>.</p>
+<p>I’ve followed a bottom-up approach in building this software, starting with the basic blocks and now integration into the entire whole. First I wrote the trie, then went ahead to write the training script and model. After that the split point identification part was added, following which the postprocessor and wrappers were added. A helper script to benchmark a model based on test data was written after that.</p>
+<p>Most of the code is written to meet the functionality requirements first. I’m proud that I’ve maintained DRY principles to a large extent. PEP-8 compliance and decent coverage have maintained and the tests enforce them too. One good thing I’ve picked up from being exposed to the developer perspective is the importance of unit tests. One great advantage I see is that it reminds you to make sure things don’t break while you modify them later.</p>
+<h1 id="hiccups">Hiccups</h1>
+<p>This period has made me realize that I’m not even in an intermediate level in my knowledge of <strong>git</strong>. I’ve been doing the delete reset thing till a while back. This time I’m reading proper documentation on rewriting history, still screwing up, fixing things after. Sometimes it gets so complicated that delete-clone again saves more time.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/git.png" alt="xkcd-1597: git" />
+<p class="caption">xkcd-1597: <strong>git</strong></p>
+</div>
+<p>My PR is still awaiting merge due to my own doings. I’ll just put this comic here and hope you understand.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/git_commit.png" alt="xkcd-1296: git-commit" />
+<p class="caption">xkcd-1296: <strong>git-commit</strong></p>
+</div>
+<p>Also worth mentioning is some mix up with terminologies. Testing part from the learning terminology got mixed up with unit-tests and created a lot of confusion.</p>
+<div class="info">
+    Written June 26, 2016
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/gsoc.html">gsoc</a>, <a href="../tags/libindic.html">libindic</a>
+    
+</div>
+
+                </div>
+                <div id="footer" class="twelve columns">
+                    Site proudly generated by
+                    <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
