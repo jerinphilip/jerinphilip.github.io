@@ -22,7 +22,7 @@
                     <p>I’m nearing the midterm evaluation deadline for GSoC with Indic project. My promised delivarable before the mid-term is a statistical sandhi-splitter. With a few days left, I’m glad to announce that the split point identification is working quite well.</p>
 <h1 id="the-approach">The Approach</h1>
 <p>The major problems when it comes to sandhi-splitting is the many levels of agglutination observed in indic languages and that we have to take into account the context and apply different rules. This is quite easy for humans who are trained all their life and can take into account the changes coming during pronouncing and writing.</p>
-<p>Let’s consider the naive method. Let <code>AXyrB</code> is a word. <code>y</code> is a character which has more chances of being a split point. We can’t be sure if <code>y</code> is a split point unless we take <code>X</code> and <code>Z</code> into account. But we can’t do it for all <code>X</code>, <code>Z</code> using a dictionary. A trie is better, but that alone won’t do.</p>
+<p>Let’s consider the naive method. Let <code>AXyZB</code> is a word. <code>y</code> is a character which has more chances of being a split point. We can’t be sure if <code>y</code> is a split point unless we take <code>X</code> and <code>Z</code> into account. But we can’t do it for all <code>X</code>, <code>Z</code> using a dictionary. A trie is better, but that alone won’t do.</p>
 <p>I’m implementing <a href="http://ltrc.iiit.ac.in/icon2015/icon2014_proceedings/papers/File71-p164.pdf">this</a> paper, as mentioned in a previous post. The approach followed is to capture common split points and non-split points from training data. There’s no way I can if else my way out of this. So, I take a decent sample of annotated data, and do the following:</p>
 <p>For each word in the training data, I have also stored split points. I loop over the string from start to end. If the index is annotated as a split point, it might be a common end-start pattern. Otherwise, it might be a middle of a word, not a split point. This is captured by using two tries.</p>
 <p>Each trie node stores count of split points and non split points. Two tries are maintained - one for capturing the forward pattern and the other for the backward pattern. If the point is a split point, I add one to the count of split points on nodes along the patterns in both tries. Else, I increment the counter for non-split points along the path in both tries.</p>
@@ -41,7 +41,7 @@ first: നഎ, second: ്താണെന
 <span class="op">---</span>
 
 <span class="co"># Backwards pattern:</span>
-Nodes visited <span class="op">in</span> order: [<span class="st">'എ'</span>]
+Nodes visited <span class="kw">in</span> order: [<span class="st">'എ'</span>]
 Probability : [<span class="fl">0.0</span>]
 List (C_sp, C_nsp) <span class="op">-</span> [(<span class="dv">0</span>, <span class="dv">80</span>)]
 <span class="op">---</span>
@@ -49,7 +49,7 @@ Final:  <span class="fl">0.0</span>
 <span class="op">---</span>
 
 <span class="co"># Forward pattern</span>
-Nodes visited <span class="op">in</span> order: [<span class="st">'ത'</span>, <span class="st">'ാ'</span>, <span class="st">'ണ'</span>, <span class="st">'െ'</span>, <span class="st">'ന'</span>]
+Nodes visited <span class="kw">in</span> order: [<span class="st">'ത'</span>, <span class="st">'ാ'</span>, <span class="st">'ണ'</span>, <span class="st">'െ'</span>, <span class="st">'ന'</span>]
 Probability : [<span class="fl">0.004149377593360996</span>, <span class="fl">0.05128205128205128</span>, <span class="fl">0.0</span>, <span class="fl">0.0</span>, <span class="fl">0.0</span>]
 List (C_sp, C_nsp) <span class="op">-</span>[(<span class="dv">2</span>, <span class="dv">480</span>), (<span class="dv">2</span>, <span class="dv">37</span>), (<span class="dv">0</span>, <span class="dv">19</span>), (<span class="dv">0</span>, <span class="dv">4</span>), (<span class="dv">0</span>, <span class="dv">4</span>)]
 <span class="op">---</span>

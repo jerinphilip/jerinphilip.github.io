@@ -23,7 +23,7 @@
 <p>A board consist 9x9 grid of cells which stores the value at the cell, and a boolean fixed, which stores if the cell’s value is fixed, or modifiable. A cell’s value being 0 indicates that its empty. A legal value is a value that has not occured in the row, column, and 3x3 internal square of a cell.</p>
 <p>We start from the first cell putting a legal value in the current cell if its not fixed and recursively trying putting legal values in the next cells. If the assumed value is not correct, then at some point in the recursion, we’re bound to come across a state, where we’re unable to produce any legal value to put in the cell. We return failure, at this point and backtrack to the last non-failure cell, try putting another legal value, recurse again trying to put values in the next cell. If we’re able to put a legal value in the last cell, it means we’ve solved the sudoku puzzle. At this point we’ll return success.</p>
 <p>The below code uses this naive method to solve a 9x9 puzzle. To test the code’s correctness, the main function is written to produce the solution to <a href="https://projecteuler.net/problem=96">Problem 96</a>, in Project Euler(Yes, that’s how I normally quick test correctness). The code is written compromising size for simplicity.</p>
-<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="ot">#include &lt;iostream&gt;</span>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#include </span><span class="im">&lt;iostream&gt;</span>
 <span class="kw">using</span> <span class="kw">namespace</span> std;
 
 
@@ -34,21 +34,21 @@
     <span class="dt">bool</span> check_row(<span class="dt">int</span> x, <span class="dt">int</span> i, <span class="dt">int</span> j){
         <span class="co">//For a row, i=const</span>
         <span class="dt">int</span> jj;
-        <span class="kw">for</span>(jj=<span class="dv">0</span>; jj&lt;<span class="dv">9</span>; jj++){
-            <span class="kw">if</span>( A[i][jj] == x )
-                <span class="kw">return</span> <span class="kw">false</span>;
+        <span class="cf">for</span>(jj=<span class="dv">0</span>; jj&lt;<span class="dv">9</span>; jj++){
+            <span class="cf">if</span>( A[i][jj] == x )
+                <span class="cf">return</span> <span class="kw">false</span>;
         }
-        <span class="kw">return</span> <span class="kw">true</span>;
+        <span class="cf">return</span> <span class="kw">true</span>;
     }
 
     <span class="dt">bool</span> check_col(<span class="dt">int</span> x, <span class="dt">int</span> i, <span class="dt">int</span> j){
         <span class="co">//For a col, j=const</span>
         <span class="dt">int</span> ii;
-        <span class="kw">for</span>(ii=<span class="dv">0</span>; ii&lt;<span class="dv">9</span>; ii++){
-            <span class="kw">if</span> ( A[ii][j] == x )
-                <span class="kw">return</span> <span class="kw">false</span>;
+        <span class="cf">for</span>(ii=<span class="dv">0</span>; ii&lt;<span class="dv">9</span>; ii++){
+            <span class="cf">if</span> ( A[ii][j] == x )
+                <span class="cf">return</span> <span class="kw">false</span>;
         }
-        <span class="kw">return</span> <span class="kw">true</span>;
+        <span class="cf">return</span> <span class="kw">true</span>;
     }
 
     <span class="dt">bool</span> check_sqr(<span class="dt">int</span> x, <span class="dt">int</span> i, <span class="dt">int</span> j){
@@ -62,19 +62,19 @@
 
         <span class="dt">int</span> ii, jj; <span class="co">//New looping variables.</span>
 
-        <span class="kw">for</span>(ii=si; ii&lt;=ei; ii++){
-            <span class="kw">for</span>(jj=sj; jj&lt;=ej; jj++){
-                <span class="kw">if</span> ( A[ii][jj] == x )
-                    <span class="kw">return</span> <span class="kw">false</span>;
+        <span class="cf">for</span>(ii=si; ii&lt;=ei; ii++){
+            <span class="cf">for</span>(jj=sj; jj&lt;=ej; jj++){
+                <span class="cf">if</span> ( A[ii][jj] == x )
+                    <span class="cf">return</span> <span class="kw">false</span>;
             }
         }
-        <span class="kw">return</span> <span class="kw">true</span>;
+        <span class="cf">return</span> <span class="kw">true</span>;
     }
 
     <span class="dt">bool</span> check_all(<span class="dt">int</span> x, <span class="dt">int</span> i, <span class="dt">int</span> j){
-        <span class="kw">if</span>( check_row(x, i, j)  &amp;&amp; check_col(x, i, j) &amp;&amp; check_sqr(x, i, j) )
-            <span class="kw">return</span> <span class="kw">true</span>;
-        <span class="kw">return</span> <span class="kw">false</span>;
+        <span class="cf">if</span>( check_row(x, i, j)  &amp;&amp; check_col(x, i, j) &amp;&amp; check_sqr(x, i, j) )
+            <span class="cf">return</span> <span class="kw">true</span>;
+        <span class="cf">return</span> <span class="kw">false</span>;
     }
 
 
@@ -84,78 +84,78 @@
 
         <span class="co">//Setting up next cell to be visited.</span>
         jn = (j<span class="dv">+1</span>)%<span class="dv">9</span>;
-        <span class="kw">if</span> (jn == <span class="dv">0</span>)
+        <span class="cf">if</span> (jn == <span class="dv">0</span>)
             in = (i<span class="dv">+1</span>)%<span class="dv">9</span>;
-        <span class="kw">else</span>
+        <span class="cf">else</span>
             in = i;
         
         <span class="co">//Checking if last cell or not.</span>
-        <span class="kw">if</span> ( i==<span class="dv">8</span> &amp;&amp; j==<span class="dv">8</span>)
+        <span class="cf">if</span> ( i==<span class="dv">8</span> &amp;&amp; j==<span class="dv">8</span>)
             last_cell = <span class="kw">true</span>;
-        <span class="kw">else</span>
+        <span class="cf">else</span>
             last_cell = <span class="kw">false</span>;
 
         <span class="co">//In case the cell has a value that is fixed.</span>
-        <span class="kw">if</span> ( FIXED[i][j] ){
-            <span class="kw">if</span> ( last_cell )
-                <span class="kw">return</span> <span class="kw">true</span>;
-            <span class="kw">else</span>
-                <span class="kw">return</span> try_cell(in, jn);
+        <span class="cf">if</span> ( FIXED[i][j] ){
+            <span class="cf">if</span> ( last_cell )
+                <span class="cf">return</span> <span class="kw">true</span>;
+            <span class="cf">else</span>
+                <span class="cf">return</span> try_cell(in, jn);
             
         }
 
 
         <span class="co">//The other case, obviously.</span>
-        <span class="kw">else</span>{
+        <span class="cf">else</span>{
             <span class="co">//Brute-force, naive method.</span>
-            <span class="kw">for</span>(<span class="dt">int</span> x = <span class="dv">1</span>; x &lt;= <span class="dv">9</span>; x++){
-                <span class="kw">if</span>(check_all(x, i, j)){
+            <span class="cf">for</span>(<span class="dt">int</span> x = <span class="dv">1</span>; x &lt;= <span class="dv">9</span>; x++){
+                <span class="cf">if</span>(check_all(x, i, j)){
                     A[i][j] = x;
-                    <span class="kw">if</span> ( last_cell ){
-                        <span class="kw">return</span> <span class="kw">true</span>;
+                    <span class="cf">if</span> ( last_cell ){
+                        <span class="cf">return</span> <span class="kw">true</span>;
                     }
-                    <span class="kw">else</span> <span class="kw">if</span>(try_cell(in, jn)){
-                        <span class="kw">return</span> <span class="kw">true</span>;
+                    <span class="cf">else</span> <span class="cf">if</span>(try_cell(in, jn)){
+                        <span class="cf">return</span> <span class="kw">true</span>;
                     }
                 }
             }
             A[i][j] = <span class="dv">0</span>;
-            <span class="kw">return</span> <span class="kw">false</span>;
+            <span class="cf">return</span> <span class="kw">false</span>;
         }
     }
 
     <span class="dt">void</span> solve(){
         <span class="dt">bool</span> solved = try_cell(<span class="dv">0</span>, <span class="dv">0</span>);
-        <span class="kw">if</span> ( solved ){
-            printf(<span class="st">&quot;Successfully Solved</span><span class="ch">\n</span><span class="st">&quot;</span>);
+        <span class="cf">if</span> ( solved ){
+            printf(<span class="st">&quot;Successfully Solved</span><span class="sc">\n</span><span class="st">&quot;</span>);
             print();
         }
-        <span class="kw">else</span>{
-            printf(<span class="st">&quot;Unable to solve</span><span class="ch">\n</span><span class="st">&quot;</span>);
+        <span class="cf">else</span>{
+            printf(<span class="st">&quot;Unable to solve</span><span class="sc">\n</span><span class="st">&quot;</span>);
         }
     }
 
     <span class="dt">void</span> print(){
         <span class="dt">int</span> i, j;
-        <span class="kw">for</span>(i=<span class="dv">0</span>; i&lt;<span class="dv">9</span>; i++){
-            <span class="kw">for</span>(j=<span class="dv">0</span>; j&lt;<span class="dv">9</span>; j++){
-                printf(<span class="st">&quot;</span><span class="ch">%d</span><span class="st"> &quot;</span>, A[i][j]);
+        <span class="cf">for</span>(i=<span class="dv">0</span>; i&lt;<span class="dv">9</span>; i++){
+            <span class="cf">for</span>(j=<span class="dv">0</span>; j&lt;<span class="dv">9</span>; j++){
+                printf(<span class="st">&quot;</span><span class="sc">%d</span><span class="st"> &quot;</span>, A[i][j]);
             }
-            printf(<span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
         }
     }
 
     <span class="dt">void</span> input(){
         <span class="dt">int</span> i, j;
         <span class="dt">char</span> S[<span class="dv">20</span>];
-        <span class="kw">for</span>(i=<span class="dv">0</span>; i&lt;<span class="dv">9</span>; i++){
-            scanf(<span class="st">&quot;</span><span class="ch">%s</span><span class="st">&quot;</span>, S);
-            <span class="kw">for</span>(j=<span class="dv">0</span>; j&lt;<span class="dv">9</span>; j++){
+        <span class="cf">for</span>(i=<span class="dv">0</span>; i&lt;<span class="dv">9</span>; i++){
+            scanf(<span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span>, S);
+            <span class="cf">for</span>(j=<span class="dv">0</span>; j&lt;<span class="dv">9</span>; j++){
                 A[i][j] = S[j]-<span class="st">'0'</span>;
-                <span class="kw">if</span> ( A[i][j] != <span class="dv">0</span> )
+                <span class="cf">if</span> ( A[i][j] != <span class="dv">0</span> )
                     FIXED[i][j] = <span class="kw">true</span>;
 
-                <span class="kw">else</span>{
+                <span class="cf">else</span>{
                     FIXED[i][j] = <span class="kw">false</span>;
                 }
             }
@@ -167,15 +167,15 @@
     sudoku S;
     <span class="dt">char</span> grid[<span class="dv">50</span>];
     <span class="dt">int</span> TC = <span class="dv">50</span>, tc, sum=<span class="dv">0</span>;
-    <span class="kw">for</span>(<span class="dt">int</span> t = <span class="dv">1</span>; t &lt;= TC; t++){
-        scanf(<span class="st">&quot;</span><span class="ch">%s</span><span class="st"> </span><span class="ch">%d</span><span class="st">&quot;</span>, grid, &amp;tc);
-        printf(<span class="st">&quot;</span><span class="ch">%s</span><span class="st"> </span><span class="ch">%d\n</span><span class="st">&quot;</span>, grid, tc);
+    <span class="cf">for</span>(<span class="dt">int</span> t = <span class="dv">1</span>; t &lt;= TC; t++){
+        scanf(<span class="st">&quot;</span><span class="sc">%s</span><span class="st"> </span><span class="sc">%d</span><span class="st">&quot;</span>, grid, &amp;tc);
+        printf(<span class="st">&quot;</span><span class="sc">%s</span><span class="st"> </span><span class="sc">%d\n</span><span class="st">&quot;</span>, grid, tc);
         S.input();
         S.solve();
         sum += S.A[<span class="dv">0</span>][<span class="dv">0</span>]*<span class="dv">100</span> + S.A[<span class="dv">0</span>][<span class="dv">1</span>]*<span class="dv">10</span> + S.A[<span class="dv">0</span>][<span class="dv">2</span>];
     }
-    printf(<span class="st">&quot;Total sum = </span><span class="ch">%d\n</span><span class="st">&quot;</span>, sum);
-    <span class="kw">return</span> <span class="dv">0</span>;
+    printf(<span class="st">&quot;Total sum = </span><span class="sc">%d\n</span><span class="st">&quot;</span>, sum);
+    <span class="cf">return</span> <span class="dv">0</span>;
 }</code></pre></div>
 <div class="info">
     Written July 22, 2015
