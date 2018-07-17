@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Journal</title>
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/syntax-highlight.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Summer of Code '16</h1>
+                        <div class="row">
+    <div class="col-md-8">
+        <div class="row">
+            <div class="col"><h1 id="background">Background</h1>
+<p>Community Bonding period of Google Summer of Code ’16 is almost over. My proposal for a sandhi-splitter for Indic Project had been selected. The proposal draft has been made public and is available <a href="https://docs.google.com/document/d/1ZDBNKa27G9CGA1QRwtQNmEcvnvQORy02XNhfE-eJt7w/edit?usp=sharinghttps://docs.google.com/document/d/1ZDBNKa27G9CGA1QRwtQNmEcvnvQORy02XNhfE-eJt7w/edit?usp=sharing">here</a>.</p>
+<p>For those too lazy to read the entire proposal, here’s a summary of what I have to implement:</p>
+<ol style="list-style-type: decimal">
+<li><strong>sandhi-splitter for Malayalam</strong>, an attempt at solving the problem of agglutination in indic languages, using Malayalam to demonstrate.</li>
+<li><strong>Integration of sandhi-splitter to spellchecker</strong>, using the split words to check for spelling as the corpus size is not infinite, improving the spellcheckers results.</li>
+<li><strong>REST API for <a href="http://libindic.org">libindic</a></strong>, offer a REST API for the services offered by the platform.</li>
+</ol>
+<p>I’m grateful to Devadath Vasudevan and Litton J Kurisinkel, who suggested the idea and whose original paper I’m going to implement as the first part. My mentors for this project are <a href="https://copyninja.info/about">Vasudev Kamath</a> and <a href="http://stultus.in/about.html">Hrishikesh K.B</a>.</p>
+<h1 id="progress-of-work">Progress of Work</h1>
+<p>As promised during the community period, I’ve come up with a skeleton app for the annotation tool. I chose to write the tool as a web application in Flask, as libindic runs on flask and most community members are familiar with it. The current setup is very basic and supports the required functionalities. The part of the interface which allows to label split points are ready. I experimented with a rule based system to transform the words once split only to get awful results. Language isn’t a formal system, its glorious chaos - quoting a famous <a href="https://xkcd.com/1576/">webcomic</a>. I found plenty of ambiguities, places where you can’t make definite rules.</p>
+<p>After a meeting with the mentors, a few modifications were suggested to the annotation tool so as to include more languages and that the sandhi-splitter repo should contain only the work, that the tool should be moved to an independent repository.</p>
+<p>You can find the working repos here:</p>
+<ul>
+<li><a href="https://github.com/jerinphilip/sandhi-splitter">sandhi-splitter</a></li>
+<li><a href="https://github.com/jerinphilip/annotation-helper">annotation-helper</a></li>
+</ul>
+<p>A few finishing touches for enabling selection of rules are left with the annotation helper. But anyway, since I have a decent dataset already in hand for Malayalam I can start working on the main promised deliverable. Modifiying the tool and creating more data meanwhile.</p>
+<h1 id="problems">Problems</h1>
+<p>Here is an example where rules are in conflict. This is when the rules are purely based on one or two of the characters at the junctions. The example is in Malayalam.</p>
+<pre><code>ആയിരിക്കണം = ആയി + ഇരിക്കണം 
+അവനെയാണ് = അവനെ + ആണ് </code></pre>
+<p>Sure, the solution is capturing a few more characters and taking them into account. This is better if modelled statistically rather than a definite rule based system.</p>
+<p>Since the rule based splitting addition to the annotation tool have gone awful, I’m thinking of giving an interface with options of rules where users can choose from existing rules and add rules, leaving the annotation of the morphophonemic transform to humans, and not the rule based system.</p></div>
+        </div>
+    <div>
+</div>
+<div class="row">
+    <div class="post-info col">
+        2016-05-22
+        
+        by Jerin Philip
+        
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Journal</title>
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/syntax-highlight.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>GSoC Final Report</h1>
+                        <div class="row">
+    <div class="col-md-8">
+        <div class="row">
+            <div class="col"><h2 id="sandhi-splitter">sandhi-splitter</h2>
+<p>This module was written from scratch and efficiently detects constituent words from a given agglutinated word. The identification part is done agnostic to the language, while splitting and joining are currently rule based.</p>
+<p>The module is hosted at <a href="https://github.com/libindic/sandhi-splitter/commits?author=jerinphilip">libindic/sandhi-splitter</a>.</p>
+<p>Documentation with examples of training, testing and using the API provided is currently hosted using gh-pages, and is available <a href="https://jerinphilip.github.io/sandhi-splitter">here</a>.</p>
+<h3 id="applications">Applications</h3>
+<ul>
+<li>Enhance the root word corpus</li>
+<li>Improve spellchecker, discussed below.</li>
+</ul>
+<h2 id="spellchecker-enhanced">spellchecker, enhanced</h2>
+<p>Next proposed addition was enhancing the spellchecker with sandhi-splitter.</p>
+<p>The implementation inherits from the existing Malayalam spellchecker, which was improved to handle inflections by Balasankar C, and with sandhi-splitter improves the results further.</p>
+<p>The pull request corresponding to this can be found <a href="https://github.com/libindic/spellchecker/pull/8">here</a>.</p>
+<h2 id="rest-api-for-libindic">REST API for libindic</h2>
+<p>WSME was used to provide REST services of libindic modules. This is interfaced as a modular application through flask blueprints, on the main libindic application.</p>
+<ul>
+<li><a href="https://github.com/libindic/Silpa-Flask/pull/31">Silpa-Flask: REST API</a></li>
+<li><a href="https://github.com/libindic/ucasort/pull/1">ucasort: WSME</a></li>
+<li><a href="https://github.com/libindic/chardetails/pull/1">chardetails: WSME</a></li>
+<li><a href="https://github.com/libindic/normalizer/pull/7">normalizer: WSME + py3 fixes</a></li>
+<li><a href="https://github.com/libindic/text-similarity/pull/1">textsimilarity: WSME</a></li>
+<li><a href="https://github.com/libindic/payyans/pull/4">payyans: WSME</a></li>
+<li><a href="https://github.com/libindic/soundex/pull/16">soundex: WSME</a></li>
+<li><a href="https://github.com/libindic/inexactsearch/pull/2">inexactsearch: WSME</a></li>
+<li><a href="https://github.com/libindic/katapayadi/pull/1">katapayadi: WSME</a></li>
+<li><a href="https://github.com/libindic/indicfortune/pull/2">indicfortune: WSME</a></li>
+</ul>
+<h2 id="links">Links</h2>
+<ul>
+<li><a href="https://discourse.indicproject.org/t/libindic-improvements/38">Indic Project Discourse</a></li>
+<li><a href="https://docs.google.com/document/d/1ZDBNKa27G9CGA1QRwtQNmEcvnvQORy02XNhfE-eJt7w/edit?usp=sharing">Original Proposal</a></li>
+</ul></div>
+        </div>
+    <div>
+</div>
+<div class="row">
+    <div class="post-info col">
+        2016-08-22
+        
+        by Jerin Philip
+        
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
