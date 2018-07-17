@@ -19,7 +19,6 @@
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-
     </head>
     <body>
             <div class="container">
@@ -39,17 +38,13 @@
                     <div class="col">
                         <h1>The General Problem</h1>
                         <div class="row">
-    <div class="col-md-8">
-        <div class="row">
-            <div class="col"><p><strong>The problem</strong>: Generate and print 46 gradesheets, copying name, roll number and a few grades from an existing google sheet. The template for the gradesheet is already ready, but unfortunately is a .docx.</p>
+    <div class="col-md-8 col-sm-12"><p><strong>The problem</strong>: Generate and print 46 gradesheets, copying name, roll number and a few grades from an existing google sheet. The template for the gradesheet is already ready, but unfortunately is a .docx.</p>
 <p><strong>The simple and obvious way of doing it</strong>: Copy template into a new doc and replace the fields with those from the sheets. There are 4 of us, if we split the task - hopefully doable in less than an hour. But the risk of human errors creeping in, and 3/4 belong to the programmer subspecies. i.e, these people will quit at editing the second document due to the monotonous work.</p>
 <p>In the end, we decided to automate the process. Downloaded the sheet as a .csv, created a python script to copy template, replace variables with values from the .csv. Getting a matching design ready for the template in latex took some time. There were a few hiccups with the pdflatex compiler. The process overall took approximately 2 hours.</p>
 <div class="figure">
 <img src="http://imgs.xkcd.com/comics/the_general_problem.png" alt="xkcd: The General Problem" />
 <p class="caption">xkcd: The General Problem</p>
 </div></div>
-        </div>
-    <div>
 </div>
 <div class="row">
     <div class="post-info col">

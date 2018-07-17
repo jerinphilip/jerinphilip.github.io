@@ -19,7 +19,6 @@
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-
     </head>
     <body>
             <div class="container">
@@ -39,9 +38,7 @@
                     <div class="col">
                         <h1>Split Point Identification</h1>
                         <div class="row">
-    <div class="col-md-8">
-        <div class="row">
-            <div class="col"><p>I’m nearing the midterm evaluation deadline for GSoC with Indic project. My promised delivarable before the mid-term is a statistical sandhi-splitter. With a few days left, I’m glad to announce that the split point identification is working quite well.</p>
+    <div class="col-md-8 col-sm-12"><p>I’m nearing the midterm evaluation deadline for GSoC with Indic project. My promised delivarable before the mid-term is a statistical sandhi-splitter. With a few days left, I’m glad to announce that the split point identification is working quite well.</p>
 <h1 id="the-approach">The Approach</h1>
 <p>The major problems when it comes to sandhi-splitting is the many levels of agglutination observed in indic languages and that we have to take into account the context and apply different rules. This is quite easy for humans who are trained all their life and can take into account the changes coming during pronouncing and writing.</p>
 <p>Let’s consider the naive method. Let <code>AXyZB</code> is a word. <code>y</code> is a character which has more chances of being a split point. We can’t be sure if <code>y</code> is a split point unless we take <code>X</code> and <code>Z</code> into account. But we can’t do it for all <code>X</code>, <code>Z</code> using a dictionary. A trie is better, but that alone won’t do.</p>
@@ -84,8 +81,6 @@ Final:  <span class="fl">0.011086285775082454</span></code></pre></div>
 <p>Instructions are provided in the README of the repo.</p>
 <h1 id="possible-improvements">Possible Improvements</h1>
 <p>Instead of having an initial skip, we could assign weights to the probabilities, since counts being higher deeper in the tree is more weighted than the counts initially. Some smoothing is already enabled to capture patterns missing from training data, but its nowhere near perfect.</p></div>
-        </div>
-    <div>
 </div>
 <div class="row">
     <div class="post-info col">
