@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Jerin Philip</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>TeX environment thoughts</h1>
+                        <div class="row">
+    <div class="col-md-8 col-sm-12"><h2 id="overleaf-vs-local-environment">Overleaf vs Local environment</h2>
+<p>Overleaf has been very convenient to collaborate with other people while writing/reviewing scientific papers. I write scientific papers in Latex, which means the source can be treated like code, and versioning be enabled. I like git and the <a href="https://xkcd.com/1597/">superpowers</a> that come with it. In an ideal setting, I’d have the full git repository with branches and versioning with my collaborators. But it’s almost unlikely that I find such people and unnecessary overhead is added to the process. Luckily OverLeaf offers a neat bridge with git enabled versioning, which solves a lot of my problems.</p>
+<p>So my typical paper-writing workflow is:</p>
+<ol style="list-style-type: decimal">
+<li>Start a project on OverLeaf,</li>
+<li>do a git-pull to the local machine</li>
+<li>Create a remote and push on a GitHub repository, because I like keeping reviews and comments as issues over there and track changes in source in the web UI.</li>
+<li>Add a Makefile so local builds are easy and possible.</li>
+<li>Use vim and evince to create an overleaf-y environment to edit locally.</li>
+</ol>
+<p>Keeping a few copies also lets you continue work in the unlikely event of an overleaf outage, or internet outage - which can happen.</p>
+<h2 id="the-pros-and-cons">The Pros and Cons</h2>
+<p>OverLeaf doesn’t allow full history access unless you are a premium user. Premium however is rather expensive, when I’m already skilled to use the versioning tools for software to track history. Not much of a plus, but I commit my changes, so I usually know which changes came from who.</p>
+<p>Sometimes people tend to mess-up documents and be clueless what went wrong (like an unbalanced paranthesis somewhere etc), then spend a fair amount of timing fixing this. It’s usually very easy to check the diffs instead, and overleaf’s UI and history access isn’t particularly the most useful when it comes to all these. It also helps me to quickly know what changes my advisors have made, so I don’t retouch them to go around in circles.</p>
+<p>I have been asked by a few why I don’t use something GUI like TexMaker. Perhaps I’m just too attached to vim. There are certain use-cases in vim, especially while working with latex-source or navigating the text fast which simply is very straightforward in vim. Here are a bunch of those:</p>
+<ol style="list-style-type: decimal">
+<li><a href="https://vim.fandom.com/wiki/Jumping_to_previously_visited_locations">jump-lists</a></li>
+<li><a href="https://github.com/godlygeek/tabular">Tabular.vim</a></li>
+<li>Indentation of math, etc which is possible in vim.</li>
+<li>I can <code>\include{...}</code> files and use <code>C-w-g-f</code> (Control-window-go-to-file) to open the file quickly in a new tab.</li>
+</ol>
+<p>Moving around files is especially useful, when the nature of your document is more book-like (a thesis, which I’m trying to wrap up soon) and the flat structure of the usual paper-template is not perhaps what you begin and proceed with.</p>
+<p>Not having <a href="https://www.tug.org/TUGboat/tb29-3/tb93laurens.pdf">SyncTex</a> is kind of a bummer, but not really a problem to me, as it has failed several times for me and is not something that I would like to get used to.</p>
+<h2 id="windows-adaptation">Windows adaptation</h2>
+<p>The above setting is very straightforward while in a Linux ecosystem. Previously I was a heavy user of Linux distributions (Ubuntu, ArchLinux), which made all the trickery convenient. But this year I decided to make my life simpler about the time I got a new laptop, a ThinkPad X1 Carbon (Generation 7). It came pre-loaded with Windows 10 and I had heard good reviews from Aditya about the Windows Subsystem for Linux (WSL). WSL2 gave me decent start on Windows (I’d totally recommend it, I’ve been trying advanced things with it and it works decent enough).</p>
+<p>I don’t need to say much here, because once you have WSL2 it’s almost the same as how you would do this on Linux.</p>
+<p>Adobe Reader opened the PDF to edit (not read-only), which made rebuilding the PDF throw errors. I solved the first issue by installing evince from <a href="https://www.fosshub.com/Evince.html">here</a>. Opens read-only and is good enough to work with. (Also, windows apps can be neatly launched from bash-shell inside WSL. I simply added a symlink to the <code>.exe</code> which lauches evince.</p>
+<h2 id="latexmk">LatexMk</h2>
+<p>I discovered Latexmk (I know, bit late) and had to rework the usual <code>Makefile</code> to enable the same. Below is the Makefile using latexmk that I use.</p>
+<script src="https://gist.github.com/jerinphilip/c9360753ba498546df707b23fdfe3207.js"></script>
+<p>I lifted somewhere from the internet, the author I can’t seem to track now. There is a modification to build to a directory, with <code>JOBNAME</code>.</p>
+<p>To use evince as the default pdf viewing tool, you might possibly want to edit your <code>~/.latexmkrc</code> with the following line:</p>
+<div class="sourceCode"><pre class="sourceCode php"><code class="sourceCode php"><span class="kw">$pdf_previewer</span> = <span class="st">'evince'</span><span class="ot">;</span></code></pre></div>
+<h2 id="what-to-tinker-with-next">What to tinker with next?</h2>
+<p><strong>WSL</strong>, particularly WSL2 is very exciting for me. I have been trying to play around with <a href="https://pidgin.im/">pidgin</a> source code in my free time, hoping I can do some plugin hacking in the future. Building and modifying seems very convenient with the WSL system (unlike my past experiences with Git Bash / Cygwin / etc).</p>
+<p><strong>LaTeX builds</strong> I have been using XeLaTeX recently because I’ve had to work with Indian language scripts and the fonts, which are not natively supported by pdflatex. While trying to solve a certain problem, I have found hints that LuaLatex is perhaps a better choice in terms of build speed etc for diagrams. Maybe, when the need becomes critical or there is some free time.</p></div>
+</div>
+<div class="row">
+    <div class="post-info col">
+        2020-05-10
+        
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
