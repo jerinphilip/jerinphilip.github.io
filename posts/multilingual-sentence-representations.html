@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Jerin Philip</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Multilingual Sentence Representations</h1>
+                        <div class="row">
+    <div class="toc col-md-4 col-sm-12 push-md-8"><h6>Outline</h6><ul>
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#methodology">Methodology</a><ul>
+<li><a href="#datasets-and-training">Datasets and Training</a></li>
+<li><a href="#encoded-representations">Encoded Representations</a><ul>
+<li><a href="#nearest-neighbours">Nearest Neighbours</a></li>
+<li><a href="#embedding-and-visualizing-in-lower-dimensions">Embedding and visualizing in lower-dimensions</a><ul>
+<li><a href="#target-space">Target Space</a></li>
+<li><a href="#source-language-space">Source language space</a></li>
+<li><a href="#colored-by-source-and-target">Colored by source and target</a></li>
+<li><a href="#same-concepts---different-language.">Same concepts - different language.</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+<li><a href="#literature-survey">Literature Survey</a><ul>
+<li><a href="#multilingual-translation">Multilingual Translation</a></li>
+<li><a href="#feature-extraction">Feature Extraction</a></li>
+<li><a href="#mining-parallel-pairs">Mining Parallel Pairs</a></li>
+<li><a href="#evaluations">Evaluations</a></li>
+</ul></li>
+<li><a href="#conclusion-and-future-work">Conclusion and Future Work</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content"><p><small> This post is an experiment killed rather early while I was looking into interpretability of learned transformer representations during my Masters. The post is added to my personal blog on 2020 August 06, but the date of the original post in my blog preserved. It’s written in the fashion of somthing like a paper. A better work I found after dropping my pursuits surrounding the problem is <a href="https://research.google/pubs/pub48541/">Investigating Multilingual NMT Representations at Scale</a>, by a group in Google. </small></p>
+<h2 id="introduction">Introduction</h2>
+<p>In this work, we investigate</p>
+<ul>
+<li>Sentence representations from a multilingual neural machine translation model.</li>
+<li>We explore the possibilities of re-use and transfer of these learnt embeddings.</li>
+</ul>
+<h2 id="methodology">Methodology</h2>
+<h5 id="datasets-and-training">Datasets and Training</h5>
+<p>We train a multilingual model with joint encoder, decoder and shared embeddings between both as per <span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span> on a large compiled corpus consisting of IIT-Bombay Hindi English Parallel Corpus (IITB-hi-en) [<span class="citation">Kunchukuttan et al. (<a href="#ref-kunchukuttan2018iit">2018</a>)</span>], Indian Languages Corpora Initiative (ILCI) [<span class="citation">Jha (<a href="#ref-jha2010tdil">2010</a>)</span>], WAT-Indic Multi Parallel Corpus (WAT-ILMPC) [<span class="citation">Nakazawa et al. (<a href="#ref-nakazawa2018overview">2018</a>)</span>]. The test sets of both IITB-hi-en and WAT-ILMPC are left out of training and the evaluation scores on these are reported below. We use a compilation of validation sets from the two datasets for monitoring validation loss.</p>
+<table>
+<thead>
+<tr class="header">
+<th>srcs</th>
+<th>hi</th>
+<th>en</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>en</td>
+<td>20.46</td>
+<td>100.00</td>
+</tr>
+<tr class="even">
+<td>hi</td>
+<td>100.00</td>
+<td>22.91</td>
+</tr>
+</tbody>
+</table>
+<p>For evaluating multilingual embeddings we use the <em>Mann Ki Baat</em> dataset as an unseen dataset, and ILCI corpus from the training dataset. The details of this dataset are described in the table below. We use 3348 samples aligned across each language form <em>Mann Ki Baat</em> and 50K from ILCI corpus. The BLEU scores on <em>Mann Ki Baat</em> are provided below.</p>
+<table>
+<thead>
+<tr class="header">
+<th>srcs</th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>99.87</td>
+<td>15.20</td>
+<td>14.43</td>
+<td>8.15</td>
+<td>3.85</td>
+<td>7.35</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>9.50</td>
+<td>100.00</td>
+<td>15.37</td>
+<td>8.71</td>
+<td>4.60</td>
+<td>8.20</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>11.97</td>
+<td>21.79</td>
+<td>99.20</td>
+<td>9.09</td>
+<td>5.83</td>
+<td>9.49</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>6.85</td>
+<td>12.00</td>
+<td>9.84</td>
+<td>99.90</td>
+<td>3.37</td>
+<td>7.32</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>3.51</td>
+<td>6.92</td>
+<td>5.86</td>
+<td>4.06</td>
+<td>99.91</td>
+<td>3.63</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>6.99</td>
+<td>11.06</td>
+<td>9.54</td>
+<td>8.00</td>
+<td>3.59</td>
+<td>99.74</td>
+</tr>
+<tr class="odd">
+<td>ur</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>19.55</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.00</td>
+</tr>
+</tbody>
+</table>
+<h4 id="encoded-representations">Encoded Representations</h4>
+<p>To obtain fixed-dimensional sentence representations for a variable length input sequence, we follow <span class="citation">Zhang et al. (<a href="#ref-zhang2018learning">2018</a>)</span> to use a concatenation of max-pooled features over time and the mean across the time-steps each individually L2 normalized. Below, we detail an ablation study by varying possibilities and found that this representation gave best results. Once we reaffirm the extracted features work best among those proposed, we attempt to visualize the <em>Mann Ki Baat</em> dataset in lower dimensions to seek what properties are strong in the encoded representations at a macro scale.</p>
+<h5 id="nearest-neighbours">Nearest Neighbours</h5>
+<p>First, we attempt to analyze over the test set for a give source and target in languages <span class="math inline">\(xx\)</span>, <span class="math inline">\(yy\)</span> respectively, embeddings generated to translation to which languages <span class="math inline">\(\hat{xx}\)</span>, <span class="math inline">\(\hat{yy}\)</span> respectively works the best. To this end, we collect the embeddings from encoder representations for each source attempted to translate to a language. For each sample, we obtain the nearest neighbours in other languages using <code>faiss</code><a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> <span class="citation">(Johnson et al., <a href="#ref-johnson2019billion">2019</a>)</span>.</p>
+<p>For the above experiment, we report the overall precision@1 over each pair of languages in the table below. The columns represent the source whose language of the sample whose nearest neighbour is being retrieved. The row indicates the target language samples which are being queried. Precision is computed in the information retrieval sense as</p>
+<p><span class="math display">\[ \mathrm{p@k} = \frac{\#(\mathrm{relevant} \cap \mathrm{retrieved})}{\# \mathrm{retrieved}} \]</span></p>
+<p>A retrieval is considered relevent if it belongs to the same multilingual sample as the query.</p>
+<table>
+<caption>Precision@1 on cross-language translation retrieval. mean-max for aggregation from time-steps. Better than a random classifier at least.</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.317</td>
+<td>0.483</td>
+<td>0.306</td>
+<td>0.173</td>
+<td>0.310</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.332</td>
+<td>1.000</td>
+<td>0.471</td>
+<td>0.243</td>
+<td>0.106</td>
+<td>0.199</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td><strong>0.491</strong></td>
+<td><strong>0.513</strong></td>
+<td>1.000</td>
+<td><strong>0.344</strong></td>
+<td><strong>0.200</strong></td>
+<td><strong>0.325</strong></td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.286</td>
+<td>0.199</td>
+<td>0.292</td>
+<td>1.000</td>
+<td>0.151</td>
+<td>0.260</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.113</td>
+<td>0.071</td>
+<td>0.139</td>
+<td>0.119</td>
+<td>1.000</td>
+<td>0.118</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.271</td>
+<td>0.181</td>
+<td>0.270</td>
+<td>0.268</td>
+<td>0.153</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<p>
+<button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#ablationFeatTables" aria-expanded="false" aria-controls="ablationFeatTables">
+Why the above features are best? Expand P@1 tables for other features.
+</button>
+</p>
+<div id="ablationFeatTables" class="collapse">
+<table>
+<caption>p@1 for max-pooled features</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.236</td>
+<td>0.426</td>
+<td>0.266</td>
+<td>0.140</td>
+<td>0.256</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.245</td>
+<td>1.000</td>
+<td>0.443</td>
+<td>0.168</td>
+<td>0.075</td>
+<td>0.153</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.420</td>
+<td>0.428</td>
+<td>1.000</td>
+<td>0.270</td>
+<td>0.164</td>
+<td>0.261</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.260</td>
+<td>0.152</td>
+<td>0.255</td>
+<td>1.000</td>
+<td>0.133</td>
+<td>0.247</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.120</td>
+<td>0.067</td>
+<td>0.148</td>
+<td>0.117</td>
+<td>1.000</td>
+<td>0.122</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.246</td>
+<td>0.144</td>
+<td>0.253</td>
+<td>0.243</td>
+<td>0.134</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for max-pooled features followed by L2-Normalization</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.110</td>
+<td>0.323</td>
+<td>0.186</td>
+<td>0.090</td>
+<td>0.186</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.168</td>
+<td>1.000</td>
+<td>0.316</td>
+<td>0.110</td>
+<td>0.046</td>
+<td>0.104</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.343</td>
+<td>0.278</td>
+<td>1.000</td>
+<td>0.202</td>
+<td>0.116</td>
+<td>0.196</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.194</td>
+<td>0.081</td>
+<td>0.193</td>
+<td>1.000</td>
+<td>0.105</td>
+<td>0.191</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.071</td>
+<td>0.027</td>
+<td>0.084</td>
+<td>0.089</td>
+<td>1.000</td>
+<td>0.088</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.164</td>
+<td>0.066</td>
+<td>0.163</td>
+<td>0.174</td>
+<td>0.097</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for aggregated-by-mean features</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.245</td>
+<td>0.412</td>
+<td>0.246</td>
+<td>0.136</td>
+<td>0.266</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.290</td>
+<td>1.000</td>
+<td>0.409</td>
+<td>0.188</td>
+<td>0.079</td>
+<td>0.160</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.452</td>
+<td>0.447</td>
+<td>1.000</td>
+<td>0.290</td>
+<td>0.165</td>
+<td>0.284</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.259</td>
+<td>0.149</td>
+<td>0.251</td>
+<td>1.000</td>
+<td>0.125</td>
+<td>0.239</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.105</td>
+<td>0.053</td>
+<td>0.116</td>
+<td>0.099</td>
+<td>1.000</td>
+<td>0.108</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.248</td>
+<td>0.140</td>
+<td>0.240</td>
+<td>0.222</td>
+<td>0.122</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for aggregated-by-mean features followed by L2-Normalization</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.305</td>
+<td>0.457</td>
+<td>0.280</td>
+<td>0.155</td>
+<td>0.284</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.304</td>
+<td>1.000</td>
+<td>0.433</td>
+<td>0.222</td>
+<td>0.096</td>
+<td>0.178</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.459</td>
+<td>0.489</td>
+<td>1.000</td>
+<td>0.317</td>
+<td>0.180</td>
+<td>0.299</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.263</td>
+<td>0.188</td>
+<td>0.272</td>
+<td>1.000</td>
+<td>0.133</td>
+<td>0.234</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.103</td>
+<td>0.070</td>
+<td>0.128</td>
+<td>0.104</td>
+<td>1.000</td>
+<td>0.106</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.251</td>
+<td>0.172</td>
+<td>0.253</td>
+<td>0.244</td>
+<td>0.135</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for concatenated mean and max features</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.290</td>
+<td>0.479</td>
+<td>0.300</td>
+<td>0.170</td>
+<td>0.299</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.307</td>
+<td>1.000</td>
+<td>0.497</td>
+<td>0.213</td>
+<td>0.100</td>
+<td>0.192</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.471</td>
+<td>0.488</td>
+<td>1.000</td>
+<td>0.313</td>
+<td>0.200</td>
+<td>0.303</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.299</td>
+<td>0.189</td>
+<td>0.299</td>
+<td>1.000</td>
+<td>0.152</td>
+<td>0.281</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.144</td>
+<td>0.085</td>
+<td>0.176</td>
+<td>0.132</td>
+<td>1.000</td>
+<td>0.138</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.286</td>
+<td>0.184</td>
+<td>0.295</td>
+<td>0.274</td>
+<td>0.157</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for concatenated mean and max features followed by L2 Normalization</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.152</td>
+<td>0.388</td>
+<td>0.234</td>
+<td>0.123</td>
+<td>0.238</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.234</td>
+<td>1.000</td>
+<td>0.378</td>
+<td>0.155</td>
+<td>0.062</td>
+<td>0.141</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.411</td>
+<td>0.355</td>
+<td>1.000</td>
+<td>0.257</td>
+<td>0.150</td>
+<td>0.253</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.246</td>
+<td>0.115</td>
+<td>0.241</td>
+<td>1.000</td>
+<td>0.134</td>
+<td>0.237</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.094</td>
+<td>0.037</td>
+<td>0.107</td>
+<td>0.107</td>
+<td>1.000</td>
+<td>0.107</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.213</td>
+<td>0.091</td>
+<td>0.205</td>
+<td>0.215</td>
+<td>0.122</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>Precision@5 on cross-language translation retrieval. mean-max for aggregation from time-steps. Is this indicative of anything?</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>0.285</td>
+<td>0.110</td>
+<td>0.144</td>
+<td>0.103</td>
+<td>0.057</td>
+<td>0.091</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.109</td>
+<td>0.362</td>
+<td>0.151</td>
+<td>0.092</td>
+<td>0.044</td>
+<td>0.072</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.143</td>
+<td>0.144</td>
+<td>0.309</td>
+<td>0.108</td>
+<td>0.067</td>
+<td>0.092</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.098</td>
+<td>0.077</td>
+<td>0.089</td>
+<td>0.298</td>
+<td>0.050</td>
+<td>0.079</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.042</td>
+<td>0.032</td>
+<td>0.050</td>
+<td>0.041</td>
+<td>0.259</td>
+<td>0.038</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.091</td>
+<td>0.070</td>
+<td>0.084</td>
+<td>0.085</td>
+<td>0.052</td>
+<td>0.284</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><small>(But the above is among very little samples. Perhaps I should index with larger representations, to well establish the <em>Mann Ki Baat</em> ones still come close.)</small></p>
+<h5 id="embedding-and-visualizing-in-lower-dimensions">Embedding and visualizing in lower-dimensions</h5>
+<p>In the below images, we illustrate the lower-dimension projections using t-SNE of the sentence embeddings from <em>Mann Ki Baat</em> dataset. We first do a PCA to reduce the dimensions to 20, followed by t-SNE on 2-dimensions.</p>
+<p>The representations are built from multilingual samples of <em>Mann Ki Baat</em>, each entry having attributes identified by the unique tuple source, target and sample-id. Multiple language samples of the same content are indexed by same sample-id.To observe which axis among these forms the grouping which make most sense - we fix a few, while keeing the others varying.</p>
+<p>Note that our methods of embedding to a 2D space of all samples are unsupervised. We proceed to color the resulting datapoints according to the labels extracted as source, target, sample-id and combinations of the same.</p>
+<h6 id="target-space">Target Space</h6>
+<p>In the first case, we color the projections using the target language attribute.</p>
+<p><a href="../static/images/multilingual-embeddings/xx-t2const.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2const.png" class="img-fluid"> </a></p>
+<p>The best grouping is obtained on the target space, implying each the encoder representations group same target language samples together. The results are in agreement with the findings of <span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span>. We’ve possibly learnt the hard way that these sentence representations aren’t that reusable for vector space comparisons as cross lingual retrieval mechanisms. Another interesting thing to note here is that each representations contain the same shapes for all languages.</p>
+<p><small> (TODO: This could suggest that there exists a matrix which can be obtained by solving the Procustes problem similar to <span class="citation">Lample et al. (<a href="#ref-lample2018word">2018</a>)</span> to get a rotation matrix. Update: Google’s submission did SVCCA, which might be more apt a choice.) </small></p>
+<h6 id="source-language-space">Source language space</h6>
+<p><a href="../static/images/multilingual-embeddings/const-t2xx.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/const-t2xx.png" class="img-fluid"> </a></p>
+<p>The source language boundaries still form some subclusters, although not as the target. For a better look, we try to view the source samples embedded for a fixed target language. Given below are encoded representations while attempting to translate to English and Hindi as indicated in the graphs below.</p>
+<div class="row">
+<div class="col-6">
+<p><a href="../static/images/multilingual-embeddings/xx-t2en.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2en.png" class="img-fluid"> </a></p>
+</div>
+<div class="col-6">
+<p><a href="../static/images/multilingual-embeddings/xx-t2hi.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2hi.png" class="img-fluid"> </a></p>
+</div>
+</div>
+<p>It’s observable above that <code>en-t2en</code> directly maps to <code>hi-t2hi</code> and <code>en-t2hi</code> somehow is similar to <code>hi-t2en</code>. But the samples not being overlayed on top of each other is still a problem, as attempts to translate to a single language isn’t likely to produce robust embeddings for cross-lingual sentence representations.</p>
+<h6 id="colored-by-source-and-target">Colored by source and target</h6>
+<p><a href="../static/images/multilingual-embeddings/xx-t2yy.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2yy.png" class="img-fluid"> </a></p>
+<p>The above is a more fine-grained view of the clusters, considering <code>src-tgt</code> as the labels and coloring accordingly.</p>
+<h6 id="same-concepts---different-language.">Same concepts - different language.</h6>
+<p>Next, we encode all sentences to translate to Hindi (<code>xx-t2hi</code>). Since here points are closer in terms of source language rather than similarity in meaning or content, we can conclude that even at a microscopic scale, we’ll need further refinements to use these embeddings as multilingual sentence representations.</p>
+<p><a href="../static/images/multilingual-embeddings/multilingual-samples.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/multilingual-samples.png" class="img-fluid"></p>
+<p></a></p>
+<p>Above, we check if multilingual closeness exists, and turns out it doesn’t. English and Hindi seems to have their own close spaces, while the others are a bit cluttered. This also seems to correlate with the size of data we have in each languages, the degree of intra-language closeness and inter-language separation. Perhaps once the data matches up in other languages, we could see how this evolves.</p>
+<!--
+#### Metric Learning for better representations
+
+\[TODO\]
+
+#### Evaluations/Benchmarking
+
+We use the encoder representations to train a network for the
+Hindi-English natural language inference task in @conneau2018xnli. This
+lets us benchmark the remaining results bridging to other numbers in
+literature.
+-->
+<h2 id="literature-survey">Literature Survey</h2>
+<h6 id="multilingual-translation">Multilingual Translation</h6>
+<p><span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span> introduced Multilingual Neural Machine Translation switching target language based on a token prepended to the input sequence. This simple method demonstrated major improvements and zero-shot capability in translation. If the parameters of the encoder and decoder and respective embeddings are shared among all languages, a consequence is that the encoder outputs become cross-lingual representations of the concept in the source language.</p>
+<h6 id="feature-extraction">Feature Extraction</h6>
+<p><span class="citation">Zhang et al. (<a href="#ref-zhang2018learning">2018</a>)</span> adapts the encoder architecture from the transformer model proposed by <span class="citation">Vaswani et al. (<a href="#ref-vaswani2017attention">2017</a>)</span> as sentence representation learning models. They however investigate the utility through downstream tasks constructing the sentence-representations through an autoencoding objective on the sentences. <span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span> uses max-pooled features across timesteps, which seems to be working out well for their use cases.</p>
+<h6 id="mining-parallel-pairs">Mining Parallel Pairs</h6>
+<p>Past works in multilingual mining have made significant use of representations arising out of translation task [<span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span>, <span class="citation">Schwenk (<a href="#ref-schwenk2018filtering">2018</a>)</span>, <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019margin">2019</a><a href="#ref-artetxe2019margin">a</a>)</span>, <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span>]. Since mining is enabled by the ability to query a sample in the vector space induced by translation, most of these work becomes relevant to the likes of cross-lingual sentence embeddings.</p>
+<p><span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span> proposes the following desired properties: (i) multilingual closeness, (ii) semantic closeness, (iii) preservation of content, (iv) scalability to many languages. <span class="citation">Schwenk (<a href="#ref-schwenk2018filtering">2018</a>)</span> uses cosine similarity, for the same representation and applies it to the BUCC task. They conclude the distance can be used in confidence estimation or to filter backtranslations. <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019margin">2019</a><a href="#ref-artetxe2019margin">a</a>)</span> strips the encoder inputs off source or target language information, having embeddings corresponding to target fed to the decoder instead, thereby providing “encoded-representations” of the sequence in a common space.</p>
+<ul>
+<li><small>The error rates reported are low. Quite unsure if our embeddings on <em>Mann Ki Baat</em> matches up to this degree. The nearest neighbour retrieval precision presented before as proxy supports this. Uses vanilla seq2seq NMT models (possibly <span class="citation">Bahdanau et al. (<a href="#ref-bahdanau2014neural">2014</a>)</span> or <span class="citation">Luong et al. (<a href="#ref-luong2015effective">2015</a>)</span>).</small></li>
+<li><small>It may perhaps be interesting to look at the t-SNE dynamics of this modified network.</small></li>
+</ul>
+<h6 id="evaluations">Evaluations</h6>
+<p>The XNLI Dataset [<span class="citation">Conneau et al. (<a href="#ref-conneau2018xnli">2018</a>)</span>] seems to be used by people in the community for benchmarking multiingual embeddings [<span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span>]. Hindi (<code>hi</code>) seems to be the only reported Indian Language in the testing set.</p>
+<p>Often, mining parallel text from news corpus and training a translation system to obtain better BLEU seems to be an assertion in favour of better mining methods. If the representations are robust and performing well, this could indicate their success.</p>
+<h2 id="conclusion-and-future-work">Conclusion and Future Work</h2>
+<p><span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span> seems to be a good way to go to generate sentence embeddings, but requires training from scratch and some modifications to <code>pytorch/fairseq</code>.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-artetxe2019margin">
+<p>Mikel Artetxe and Holger Schwenk. 2019a. Margin-based parallel corpus mining with multilingual sentence embeddings. In <em>Proceedings of the 57th annual meeting of the association for computational linguistics</em>, pages 3197–3203.</p>
+</div>
+<div id="ref-artetxe2019massively">
+<p>Mikel Artetxe and Holger Schwenk. 2019b. Massively multilingual sentence embeddings for zero-shot cross-lingual transfer and beyond. <em>Transactions of the Association for Computational Linguistics</em>, 7:597–610.</p>
+</div>
+<div id="ref-bahdanau2014neural">
+<p>Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio. 2014. Neural machine translation by jointly learning to align and translate. <em>arXiv preprint arXiv:1409.0473</em>.</p>
+</div>
+<div id="ref-conneau2018xnli">
+<p>Alexis Conneau, Ruty Rinott, Guillaume Lample, Adina Williams, Samuel Bowman, Holger Schwenk, and Veselin Stoyanov. 2018. XNLI: Evaluating cross-lingual sentence representations. In <em>Proceedings of the 2018 conference on empirical methods in natural language processing</em>, pages 2475–2485.</p>
+</div>
+<div id="ref-jha2010tdil">
+<p>Girish Nath Jha. 2010. The TDIL Program and the Indian Language Corpora Intitiative (ILCI). In <em>LREC</em>.</p>
+</div>
+<div id="ref-johnson2019billion">
+<p>Jeff Johnson, Matthijs Douze, and Hervé Jégou. 2019. Billion-scale similarity search with gpus. <em>IEEE Transactions on Big Data</em>.</p>
+</div>
+<div id="ref-johnson2017google">
+<p>Melvin Johnson, Mike Schuster, Quoc V Le, Maxim Krikun, Yonghui Wu, Zhifeng Chen, Nikhil Thorat, Fernanda Viégas, Martin Wattenberg, Greg Corrado, and others. 2017. Google’s multilingual neural machine translation system: Enabling zero-shot translation. <em>Transactions of the Association for Computational Linguistics</em>, 5:339–351.</p>
+</div>
+<div id="ref-kunchukuttan2018iit">
+<p>Anoop Kunchukuttan, Pratik Mehta, and Pushpak Bhattacharyya. 2018. The IIT Bombay English-Hindi Parallel Corpus. In <em>Proceedings of the eleventh international conference on language resources and evaluation (lrec-2018)</em>.</p>
+</div>
+<div id="ref-lample2018word">
+<p>Guillaume Lample, Alexis Conneau, Marc’Aurelio Ranzato, Ludovic Denoyer, and Hervé Jégou. 2018. Word translation without parallel data. In <em>International conference on learning representations</em>.</p>
+</div>
+<div id="ref-luong2015effective">
+<p>Minh-Thang Luong, Hieu Pham, and Christopher D Manning. 2015. Effective approaches to attention-based neural machine translation. <em>arXiv preprint arXiv:1508.04025</em>.</p>
+</div>
+<div id="ref-nakazawa2018overview">
+<p>Toshiaki Nakazawa, Katsuhito Sudoh, Shohei Higashiyama, Chenchen Ding, Raj Dabre, Hideya Mino, Isao Goto, Win Pa Pa, Anoop Kunchukuttan, and Sadao Kurohashi. 2018. Overview of the 5th workshop on asian translation. In <em>Proceedings of the 5th workshop on asian translation (wat2018)</em>.</p>
+</div>
+<div id="ref-schwenk2018filtering">
+<p>Holger Schwenk. 2018. Filtering and mining parallel data in a joint multilingual space. In <em>Proceedings of the 56th annual meeting of the association for computational linguistics (volume 2: Short papers)</em>, pages 228–234.</p>
+</div>
+<div id="ref-schwenk2017learning">
+<p>Holger Schwenk and Matthijs Douze. 2017. Learning joint multilingual sentence representations with neural machine translation. In <em>Proceedings of the 2nd workshop on representation learning for nlp</em>, pages 157–167.</p>
+</div>
+<div id="ref-vaswani2017attention">
+<p>Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In <em>Advances in neural information processing systems</em>, pages 5998–6008.</p>
+</div>
+<div id="ref-zhang2018learning">
+<p>Minghua Zhang, Yunfang Wu, Weigang Li, and Wei Li. 2018. Learning universal sentence representations with mean-max attention autoencoder. In <em>Proceedings of the 2018 conference on empirical methods in natural language processing</em>, pages 4514–4523.</p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p><a href="https://github.com/facebookresearch/faiss">github.com/facebookresearch/faiss</a><a href="#fnref1">↩</a></p></li>
+</ol>
+</div></div>
+</div>
+<div class="row">
+    <div class="post-info col">
+        2019-06-04
+        
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
