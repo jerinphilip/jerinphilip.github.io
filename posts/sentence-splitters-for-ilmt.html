@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Jerin Philip</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Unsupervised Sentence Tokenization for Indian Languages</h1>
+                        <div class="row">
+    <div class="toc col-md-4 col-sm-12 push-md-8"><h6>Outline</h6><ul>
+<li><a href="#premise">Premise</a></li>
+<li><a href="#a-closer-look-at-the-problem">A closer look at the problem</a></li>
+<li><a href="#enter-the-punkttokenizer">Enter the PunktTokenizer</a></li>
+<li><a href="#hacking-punkttokenizer">Hacking PunktTokenizer</a><ul>
+<li><a href="#getting-training-to-work">Getting training to work</a></li>
+<li><a href="#injecting-custom-delimiters">Injecting custom delimiters</a><ul>
+<li><a href="#process">Process</a></li>
+<li><a href="#final-solutionworkaround">Final Solution/Workaround</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#merging-into-ilmulti">Merging into ilmulti</a></li>
+<li><a href="#afterthoughts">Afterthoughts</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content"><p>I had originally built the tooling around my static site generator to actually write a log of <a href="http://preon.iiit.ac.in/~jerin/">my work in CVIT</a>. Much of the content I wrote used to go there, but since I’m out now and free, I have new resolution to convert pieces that won’t make to papers here.</p>
+<p>A lot of my work used to involve playing catch-up with what has already been well-implemented and working for western languages adapting them to Indian Languages. Much of these are worth penning-down, but won’t be strong enough to make to any academic publishing venues. Neither do I have the bandwidth to take it to a full-open-source well-received library now. I will hope these help out someone foraying into the area in the future.</p>
+<h2 id="premise">Premise</h2>
+<p>The <a href="http://pib.gov.in">Press Information Bureau</a> (PIB) articles are currently a source of training data for us to try out ideas in NMT models. A very low level yet largely critical issue which I have in my Indian Languages Machine Translation pipeline is <strong>sentence-splitting</strong>.</p>
+<p>This is a point of increased irritation for me while inspecting the outputs and alignments in a web-interface I hacked up together for PIB debugging. I have realized the gravity of this problem only recently, after using crude-rule based setups to do sentence-tokenization brought about artifacts. Some of the errors in this pipeline seems to have been mitigated by some dark-magic in BLEUAlign <span class="citation">(Sennrich and Volk, <a href="#ref-sennrich2011iterative">2011</a>)</span> which works in our favour compensating any serious damage.</p>
+<p>If given an option, I would just write or show code - no documentation, no non-technical aspects. Let’s have a closer look at what the problem with my old pattern/rule based sentence-tokenization is.</p>
+<h2 id="a-closer-look-at-the-problem">A closer look at the problem</h2>
+<p>We will keep the example an English one for a wider-audience.</p>
+<blockquote>
+<p>GST Revenue Collection Figures stand at Rs.92,150 crore as on 23rd October, 2017; The total number of GSTR 3B returns filed for the month of September 2017 is 42.91 lakhs (as on 23.10.2017).</p>
+</blockquote>
+<p>Going by the usual sentence-delimiter ‘.’ alone in the above setting leads to ‘23.10.2017’ being treated as 3 different sentences with my currently implemented rule-based segmenter alone. The ambiguity here needs to be often resolved statistically using surrounding context. Same goes for ‘Rs.’. Now my problem is that 23 here would map to 23 in the Hindi sentence as well, which will seep through my checks in the pipeline. I have a gut-feeling that I am bound to get better translations and improved retrieval scores which I use to rank matching articles as well here.</p>
+<p>One might think - languages like Hindi, Bengali etc. have a different delimiter. This should make the job easier in these languages. However, there are several documents on the web which use the period (full-stop) instead of the usual end-of-sentence-marker (<code>\u0965</code>), or the Devanagari <em>danda</em>. Go have a look at <a href="https://khabar.ndtv.com/">NDTV Khabar</a>, for example. It seems that humans have also managed to confuse readers by using the vertical-pipe instead (<code>|</code>).</p>
+<p>As I start, I am already aware of some <a href="https://github.com/moses-smt/mosesdecoder/commit/103707002699a1e114a2f45c1ef1c2b20a981964">additions</a> by <a href="http://homepages.inf.ed.ac.uk/bhaddow">Barry Haddow</a>, which he possibly created while preparing the PMIndia Corpus. However the additions are in the moses and possibly the perl ecosystem, which I will shy-away because my ecosystem is built in python.</p>
+<h2 id="enter-the-punkttokenizer">Enter the PunktTokenizer</h2>
+<p>Punkt <span class="citation">(Kiss and Strunk, <a href="#ref-kiss2006unsupervised">2006</a>)</span> has existed for a while now, and it’s perhaps my lack of background in NLP why I wasn’t aware about the same. I am also curious as to why nobody tried to implement it for Indian Languages. I found an <a href="https://github.com/nltk/nltk_data/pull/144">attempt</a> which tried to create one for Malayalam, which didn’t get merged yet.</p>
+<p>There is already an existing implementation in <a href="https://github.com/nltk/nltk/blob/develop/nltk/tokenize/punkt.py">NLTK</a> <span class="citation">(Bird et al., <a href="#ref-bird2009natural">2009</a>)</span>. So as I take on another project in the area, I thought, why not ensure that there are Punkt Tokenizers available publically for the community to use for Indian Languages. So I set-out to the self-assigned task in hand.</p>
+<h2 id="hacking-punkttokenizer">Hacking PunktTokenizer</h2>
+<p>As I begin, I am notoriously underestimating the time-required for this task. This is supposed to be a tiny part of what I am about to do. My hope is that I just need to get training code connected and it will out-of-the box work.</p>
+<h3 id="getting-training-to-work">Getting training to work</h3>
+<p><img src="https://imgs.xkcd.com/comics/dependency_2x.png" width="50%"></p>
+<p><strong>Should be easy given a great idea and some existing NLTK implementation, correct?</strong></p>
+<p>For a surprisingly robust idea and what should be widely adopted(?) idea, the tutorials on how to train and similar are not as abundantly available as I thought it would be. StackOverflow gave a couple of useful links (<a href="https://stackoverflow.com/questions/52150000/how-to-train-nltk-punktsentencetokenizer-batchwise">#1</a>, <a href="https://stackoverflow.com/questions/21160310/training-data-format-for-nltk-punkt">#2</a>). After one more level of digging, what I finally found worked to be repurposed for my use-case was at <a href="https://github.com/alvations/DLTK/blob/master/dltk/tokenize/tokenizer.py">alvations/dltk</a>. There’s a decent example in there, which I started repurposing for my needs.</p>
+<p>Okay, I have managed to figure out the training routine. However, this doesn’t seem to be working for sentence-delimiters which are different, like Hindi’s <em>PurnaVirama</em> and Bengali’s whatever the delimiter is. Good thing is <a href="https://bnjasim.github.io/">Binu</a> has found a potential list of these and stored them into some <a href="https://github.com/jerinphilip/ilmulti/blob/ccdaf9f5ffdf06c921276092f19a62883fcaf8e0/ilmulti/segment/segmenters.py#L37">pattern-segmenter</a> in <a href="https://github.com/jerinphilip/ilmulti">ilmulti</a>. Some useful information exists in <a href="http://anoopk.in/">Anoop</a>’s <a href="https://github.com/anoopkunchukuttan/indic_nlp_library/blob/master/indicnlp/tokenize/sentence_tokenize.py">IndicNLPLibrary code</a> as well, where he does some accounting for numbers and abbreviations. But I have a policy of not doing anything for a single-language and hence me rooting for trained Punkt models.</p>
+<h3 id="injecting-custom-delimiters">Injecting custom delimiters</h3>
+<p>There’s an <a href="https://github.com/nltk/nltk/issues/2008">entire thread</a> by alvations again on some attempt - oh, I can start to empathize with the plight now. My thinking goes like this now, <a href="https://www.nltk.org/_modules/nltk/tokenize/punkt.html#PunktLanguageVars"><code>PunktLanguageVars</code></a> have to be customized per language inorder to be able to accomodate the custom delimiters in languages like Bengali, Hindi, Marathi, Urdu etc. Somewhere in the source I found this has to be overridden.</p>
+<h4 id="process">Process</h4>
+<p>The following are my reactions as I progress about getting this accomplished.</p>
+<ol style="list-style-type: decimal">
+<li>Ugghh, I actually need more knowledge of Punkt the paper and the implementation now.<br />
+</li>
+<li>Turns out not, I just modified the sentence-delimiters with some twisted python dynamic inheritance <a href="https://github.com/jerinphilip/ilmulti/blob/c589adfb1a23834041ac65deec35fe182ff2a92a/ilmulti/segment/punkt_segmenter/utils.py#L7-L30">workarounds</a> (might have been an overkill, if I look back). Marathi seems to be using full-stops.</li>
+<li>Training might have improved with the additional stuff, I hope. But what about test? Found something on StackOverflow. <a href="https://stackoverflow.com/questions/29746635/nltk-sentence-tokenizer-custom-sentence-starters">nltk:custom-sentence-starters</a> The above doesn’t seem to be working, weird.<br />
+</li>
+<li>Seems like this is more effort than what it’s worth, thinking of lesser solutions that I can get away with. Decimal, Abbreviation ambiguity to be cleared in a first round, then use hard-delimiters for each language, like the Devanagirir <em>danda</em> in a second pass.</li>
+<li>Finally managed a working solution after tinkering with the code for a while. I modified the first-pass-annotation function from punkt pulling the punkt implementation’s <a href="https://github.com/nltk/nltk/blob/b0cd83ded0c3c2394f878d8577d71187fa3f9ae4/nltk/tokenize/punkt.py">source</a>. second pass.</li>
+</ol>
+<h4 id="final-solutionworkaround">Final Solution/Workaround</h4>
+<div class="sourceCode"><pre class="sourceCode diff"><code class="sourceCode diff"><span class="kw">diff --git a/sentence_tokenizers/punkt.py b/sentence_tokenizers/punkt.py</span>
+index 408ce27..e30de2a 100644
+<span class="dt">--- a/sentence_tokenizers/punkt.py</span>
++++ b/sentence_tokenizers/punkt.py
+@@ -615,6 +615,10 @@ class PunktBaseClass(object):
+                 aug_tok.abbr = True
+             else:
+                 aug_tok.sentbreak = True
++        else:
++            for sent_end_char in self._lang_vars.sent_end_chars:
++                if tok[-1] == sent_end_char:
++                    aug_tok.sentbreak = True
+ 
+         return
+ </code></pre></div>
+<p>On a quick look, I can already tell that <code>tok[-1]</code> is a potential <code>IndexError</code> in the future at some point, maybe as I am not placing any guards. But this is not production code, we will handle it when an issue comes.</p>
+<p>In the above ordering, you can observe me coasting through the points in below graph:</p>
+<p><img src="https://i.redd.it/d0dxcnw57kb01.jpg" width="50%"></p>
+<p>I would ideally wish to open a PR, communicate with the developers and merge the required things upstream in nltk, but for now I will find myself content with a working solution and move onward to immediately pressing things in hand.</p>
+<h2 id="merging-into-ilmulti">Merging into ilmulti</h2>
+<p>Looks like I have some solution ready for sentence tokenization for Indian Languages. I was prototyping at <a href="https://github.com/jerinphilip/sentence-tokenizers">jerinphilip/sentence-tokenizers</a> I have the <a href="https://github.com/jerinphilip/ilmulti">ilmulti</a> repo prepared with some API which currently exists inside my head. Fitting the sentence-tokenizers I just built to the same provides ease of usage in my PIB pipeline.</p>
+<p>This is what we will do next, and build the documentation along with the blog post in the process.</p>
+<p>The API is rather simple:</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python">
+<span class="kw">class</span> BaseSegmenter:
+
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs):
+        <span class="co"># Initialize with any required trained models, paths,</span>
+        <span class="co"># language configurations.</span>
+
+    <span class="kw">def</span> <span class="fu">__call__</span>(<span class="va">self</span>, content, lang<span class="op">=</span><span class="va">None</span>):
+        <span class="co"># Find language if unspecified.</span>
+        <span class="co"># Call the language specific sentence-tokenizer</span></code></pre></div>
+<p>I usually have some lazy-load hack involved as well, and instances for a particular language are created only during the first call for the same and reused after.</p>
+<p>I want to add some tests as well, at least the qualititative kind so people can quickly get started with the individual components. This time, I have managed to squeeze the tests, for a quick qualitative checks in two scripts (<a href="https://github.com/jerinphilip/ilmulti/blob/master/ilmulti/segment/punkt_segmenter/test.py">#1</a>, <a href="https://github.com/jerinphilip/ilmulti/blob/master/scripts/test_punkt.sh">#2</a>).</p>
+<p>The final step is to check integration in the PIB crawl-environment that the sentence-tokenizers (which I call segmenters) are working as intended. At this stage, I can export a document NMT standard corpus with segment annotations from my raw-text so researchers can work in the area while applying principles or ideas to Indian Languages as well.</p>
+<p><strong>Let the survivor bias kick in</strong>. This was cakewalk - took a few fixes to the code I wrote initially, but didn’t take much time getting there. Numbers decimal’s etc seem to be working nicely, I will still need to account for more abbreviations etc., which can eventually be improved as the data-situation improves, I hope..</p>
+<h2 id="afterthoughts">Afterthoughts</h2>
+<ol style="list-style-type: decimal">
+<li>The current trained models of Punkt are not perhaps the best. But I believe I can eventually tap into the monolingual data in the likes of <a href="https://github.com/AI4Bharat/indicnlp_corpus">AI4Bharat</a> <span class="citation">(Kunchukuttan et al., <a href="#ref-kunchukuttan2020ai4bharat">2020</a>)</span>.</li>
+<li>For a task among several other things done under 2 days, while not perfect, this is good enough a starting point. Maybe someone who follow-up the work in IIIT can take cleaning this up incrementally.</li>
+<li>Once again, working my way around several stuff I have no clue how it runs under the hood - I have successfully managed to produce something of value. I intend to read up more on the likes of BleuAlign and Punkt later, but no time in hand now.</li>
+<li>Using this in our pipeline mentioned in <span class="citation">Siripragada et al. (<a href="#ref-siripragada-etal-2020-multilingual">2020</a>)</span> and <span class="citation">Philip et al. (<a href="#ref-philip2020revisiting">2020</a>)</span> actually led to lesser sentences with more-articles (but I expect a consequent increment in mean-sentence-length or an eventual bugfix). Who knows, if the improved quality of the corpora might lead to better BLEU scores?</li>
+<li>These should easily cover 11 languages which ilmulti operates on, but I won’t make many strong claims here.</li>
+</ol>
+<h1 id="references" class="unnumbered">References</h1>
+<div id="refs" class="references">
+<div id="ref-bird2009natural">
+<p>Steven Bird, Ewan Klein, and Edward Loper. 2009. <em>Natural language processing with python: Analyzing text with the natural language toolkit</em>. “ O’Reilly Media, Inc.”, editions.</p>
+</div>
+<div id="ref-kiss2006unsupervised">
+<p>Tibor Kiss and Jan Strunk. 2006. Unsupervised multilingual sentence boundary detection. <em>Computational linguistics</em>, 32(4):485–525.</p>
+</div>
+<div id="ref-kunchukuttan2020ai4bharat">
+<p>Anoop Kunchukuttan, Divyanshu Kakwani, Satish Golla, Avik Bhattacharyya, Mitesh M Khapra, Pratyush Kumar, and others. 2020. AI4Bharat-indicnlp corpus: Monolingual corpora and word embeddings for indic languages. <em>arXiv preprint arXiv:2005.00085</em>.</p>
+</div>
+<div id="ref-philip2020revisiting">
+<p>Jerin Philip, Shashank Siripragada, Vinay P Namboodiri, and CV Jawahar. 2020. Revisiting low resource status of indian languages in machine translation. <em>arXiv preprint arXiv:2008.04860</em>.</p>
+</div>
+<div id="ref-sennrich2011iterative">
+<p>Rico Sennrich and Martin Volk. 2011. Iterative, mt-based sentence alignment of parallel texts. In <em>Proceedings of the 18th nordic conference of computational linguistics (nodalida 2011)</em>, pages 175–182.</p>
+</div>
+<div id="ref-siripragada-etal-2020-multilingual">
+<p>Shashank Siripragada, Jerin Philip, Vinay P. Namboodiri, and C V Jawahar. 2020. A multilingual parallel corpora collection effort for Indian languages. In <em>Proceedings of the 12th language resources and evaluation conference</em>, pages 3743–3751, Marseille, France, May. European Language Resources Association.</p>
+</div>
+</div></div>
+</div>
+<div class="row">
+    <div class="post-info col">
+        2020-08-20
+        
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
