@@ -64,7 +64,7 @@
     <div class="toc col-md-4 col-sm-12 push-md-8"><h6>Outline</h6><ul>
 <li><a href="#try-to-find-a-decent-nix-shell.">Try to find a decent *nix shell.</a></li>
 <li><a href="#always-leave-a-session-on-the-server-tmux.">Always leave a session on the server: tmux.</a><ul>
-<li><a href="#installing-locally.">Installing locally.</a></li>
+<li><a href="#installing-tmux-locally.">Installing tmux locally.</a></li>
 <li><a href="#configuring-tmux.">Configuring tmux.</a></li>
 <li><a href="#auto-attach-sessions">auto-attach sessions!</a></li>
 </ul></li>
@@ -75,6 +75,9 @@
 <li><a href="#bringing-git-into-the-workflow">Bringing git into the workflow…</a></li>
 </ul></li>
 <li><a href="#on-phone-juicessh">On Phone: JuiceSSH</a></li>
+<li><a href="#sharing-text">Sharing Text</a><ul>
+<li><a href="#pastebin-services">Pastebin services</a></li>
+</ul></li>
 <li><a href="#epilogue">Epilogue</a></li>
 </ul></div><div class="col-md-8 col-sm-12 post-content"><p>My home is perhaps not located in the most urbanized of places. We had broadband a while back but very limited offerings. The only provider that existed - BSNL provided were absurdly slow and not value for money. At the time Jio came up as an alternative, I had asked BSNL office if they’d ever have any better offerings. They responded negative for the near future. The broadband-connection had been scrapped since then, and I had switched the home connection completely to 4G after some speedtest benchmarks. Something I have to look forward to is Fiber to the Home (FTTH) technology has presently made ways to where my home is and I might just get a good enough connection soon. I might have to bear with a little delay though. Thus fast forward a year or two from my earlier change of internet back home - I am back in a situation where I need a stronger connection, or manage with Jio amidst connection fluctuations etc etc.</p>
 <p>On a recent conversation with a colleague at IIIT Hyderabad who started with MobaXterm on Windows with vanilla SSH, I realized many people don’t know these methods. This would be the umpteenth time someone has brought these troubles in front of me, and I’d rather have a document which I can point to going ahead than having to describe each time. On another thread, I have realized Sukanta Sen, soon to be work-colleague and Prof. Kenneth Heafield, my new boss have also shared some troubles with working remotely connecting to servers. They have suggested mosh, which I have already been using for about 2-3 years now.</p>
@@ -94,7 +97,7 @@
 <h1 id="always-leave-a-session-on-the-server-tmux.">Always leave a session on the server: tmux.</h1>
 <p>I always prefer to leave tmux sessions running on a server that is guaranteed to have network connectivity. At IIIT-Hyderabad, my former university and NAVER LABS Europe where I recently finished my internship, this had been the gateway nodes which allow for such operation. In IIIT - this was atom or ada, the headnodes to the HPC clusters I worked with.</p>
 <p>If you have tmux (one of the recent versions) installed already on this server, life-becomes really easy. Often server-admins prefer ancient CentOS and tmux versions, which I do not find to my taste. For the uninitiated, it’s actually really easy to install a more recent version of tmux by yourself without root-permissions. The only dependency tmux has is perhaps libevent.</p>
-<h2 id="installing-locally.">Installing locally.</h2>
+<h2 id="installing-tmux-locally.">Installing tmux locally.</h2>
 <p>The following is subject to change, as the source of the following packages change. At the time this post is being written:</p>
 <p>You can find a recent version of tmux at:</p>
 <ul>
@@ -110,9 +113,10 @@
 </ul>
 <h2 id="configuring-tmux.">Configuring tmux.</h2>
 <p>There are a lot of ninja-techniques to configure as well. I often try to stick with the bare minimum and defaults (not changing modifiers etc), so I can get started on the next server with minimum configuration change requirements.</p>
+<p>You can find several good enough tutorials to configure tmux online.</p>
 <h2 id="auto-attach-sessions">auto-attach sessions!</h2>
 <p>I change machines between my laptop, desktop and phone while connecting to the servers described above. A desirable feature is consistency among all three, and saved sessions with auto-attach at the point of connection. To enable this:</p>
-<p>I normally use only one tmux session and multiplex using panes or splits. I have the following script which auto-attaches a tmux if it is already running, otherwise creates one for me. The <code>if</code> guard is so that when <code>~/.bashrc</code> is run again in a compute node, it doesn’t create tmux-ception.</p>
+<p>I normally use only one tmux session and multiplex using panes or splits. I have the following script which auto-attaches a tmux if it is already running, otherwise creates one for me. Add the snippet in your <code>~/.bashrc</code> or <code>~/.bash_profile</code>. If you’re not using bash, which is default on most systems, you should be knowledgeble enough to find the runtime-configuration file where this goes. The <code>if</code> guard is so that when <code>~/.bashrc</code> is run again in a compute node, it doesn’t create tmux-ception.</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># HOSTNAME checks and launches tmux only on the ada head-node.</span>
 <span class="co"># Checks if already within a tmux as well.</span>
 <span class="kw">if</span><span class="bu"> [</span> <span class="va">$HOSTNAME</span> <span class="ot">=</span> <span class="st">&quot;ada.iiit.ac.in&quot;</span><span class="bu"> ]</span> <span class="kw">&amp;&amp;</span><span class="bu"> [</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$TMUX</span><span class="st">&quot;</span><span class="bu"> ]</span> ; <span class="kw">then</span>
@@ -153,6 +157,10 @@
 <li><a href="https://play.google.com/store/apps/details?id=com.sonelli.juicessh&amp;hl=en_IN">Google Play Store: JuiceSSH</a></li>
 </ul>
 <p>There are other alternatives as well, but JuiceSSH is what I like. Soon, I think I might even end up paying for the premium features the developer provides.</p>
+<h1 id="sharing-text">Sharing Text</h1>
+<p>Often, I end up in a circumstance where I have to share text generated in these servers to another place (maybe my local machine, maybe to share results with a colleague). The issue with the above setup is that often, these outputs can’t be copy-pasted using mouse (as the terminal-mosh-tmux-server intermediates will lose the clipboard).</p>
+<h2 id="pastebin-services">Pastebin services</h2>
+<p>What I rely on is a command-line paste-service. I used to use <a href="http://ptpb.pw">ptpb.pw</a>. However, this service has gone down since then due to abuse. Of late, I have stuck to <a href="http://ix.io">ix.io</a>. It even offers a user through <code>.netrc</code> based login, which is not very safe but I have been a happy user of. I have found this service satisfactory enough for now. You can substitute for the same with any paste-provider with a command line service. I will point to the possibilities opened by such a service and leave for you to google for the rest.</p>
 <h1 id="epilogue">Epilogue</h1>
 <p>This post was drafted on a TGV with the onboard WiFi, as I’m not sure how otherwise to kill time on a 4.5 hour trip to Paris from Toulouse. I have wrapped up my 6-month internship at NAVER LABS Europe, stayed a month with Phani while attempting a UK Visa, which has unfortunately failed. From Paris, I’m hoping I can take the Vande Bharat (CDG - DEL - COK), to arrive home in about 48 hours of travel.</p>
 <p>Forgive any typos or errors, and please be kind-enough to point them out so I can correct if they exist. If you know better methods to stay connected and edit code, run them on servers, please do let me know in comments below.</p></div>
