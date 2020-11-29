@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="IITB Hindi English - Usable Corpus; Hidden Troubles" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/iitb-transfer-check.html" />
+        <title>IITB Hindi English - Usable Corpus; Hidden Troubles</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>IITB Hindi English - Usable Corpus; Hidden Troubles</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jul 30, 2018</div>
+
+         
+
+         
+            <div><a href="../tags/posts/ilmt.html">ilmt</a>, <a href="../tags/posts/indian-languages.html">indian-languages</a>, <a href="../tags/posts/mt.html">mt</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 push-md-8"><h6>Outline</h6><ul>
+<li><a href="#premise">Premise</a></li>
+<li><a href="#architecture-and-framework">Architecture and Framework</a></li>
+<li><a href="#objectives">Objectives</a></li>
+<li><a href="#experiments">Experiments</a><ul>
+<li><a href="#individual-datasets">Individual Datasets</a></li>
+<li><a href="#transfer-across-constituents">Transfer across constituents</a><ul>
+<li><a href="#inferences">Inferences</a></li>
+</ul></li>
+<li><a href="#refining-training-data-based-on-transfer-stats">Refining training data based on transfer stats</a><ul>
+<li><a href="#quantitative">Quantitative</a></li>
+<li><a href="#qualitative">Qualitative</a></li>
+<li><a href="#conclusions">Conclusions</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#forward">Forward</a><ul>
+<li><a href="#better-data-sampling">Better(?) Data Sampling</a></li>
+</ul></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content"><p><small> This post was written 2 years back in a website I used to report results back to my advisor. I spent quite some time doing quite unnecessary stuff, figuring out what was wrong why I was getting astonishingly poor results compared to those reported in literature. The <a href="http://www.cfilt.iitb.ac.in/iitb_parallel/">corpus page</a> had briefly a filtered version from <a href="https://github.com/deciphyre">Saumitra Yadav</a>, which I thought was nice gesture and since seem to have taken off the same. To point to the general people why not to use a corpus as is, from my hard learnings, I publish the post backdated with my experiences here. The post is added to this site on 2020 November 28.</small></p>
+<p><small>Some of the writing in this document is not very kind, account for that it was from an irritated research-scholar who was held to explain why he had poor results from a strong faculty-advisor, and had to go and do a set of brute-force experiments which would not go anywhere to publication. I have since built many resources out of usable parts of IITB Hindi English corpus, which I am grateful to the people who released the resources for, and in process empathize with their plights as well. </small></p>
+<h1 id="premise">Premise</h1>
+<p>I’ve been trying to produce results with the IIT-Bombay Hindi English parallel corpus, but the dataset doesn’t seem to be giving good results at all, for NMT.</p>
+<p>I’m in no way able to match scores reported by IIT-B teams, with some tinkering and adjustment based the training corpus, I can fine tune it for the test set - but still I have doubts of the suitability of IIT-Bombay Hindi English parallel corpus as a good training set for neural machine translation.</p>
+<h1 id="architecture-and-framework">Architecture and Framework</h1>
+<ul>
+<li>Framework: <a href="https://github.com/OpenNMT/OpenNMT-py/">OpenNMT-py</a></li>
+<li>Preprocessing:</li>
+<li>Primitive Tokenization (Whitespace, punctuation based)</li>
+<li><p><a href="https://github.com/OpenNMT/OpenNMT-py/blob/master/tools/bpe_pipeline.sh">BPE</a></p></li>
+<li>Model Architecture:
+<ul>
+<li>Encoder: BRNN, 500 Neurons x 2 Layers</li>
+<li>Decoder: RNN, 500 Neurons x 2 Layers</li>
+<li>Attention: Luong’s General Attention</li>
+</ul></li>
+<li><p>Decoding: Beam Search, beam width 5.</p></li>
+<li>Training Configurations:
+<ul>
+<li>100 Epochs.</li>
+<li>Model with best (Validation Accuracy, Validation Perplexity) chosen for testing.</li>
+</ul></li>
+<li>Testing:
+<ul>
+<li>Replace unknowns with nearest word using attention.</li>
+</ul></li>
+</ul>
+<h1 id="objectives">Objectives</h1>
+<ul>
+<li><p>Throughout my method, I’ll keep my model constant - since I’m primarily interested in how data affects training and generalization.</p></li>
+<li><p>To figure out what exactly is happening, to see if the individual datasets that constitutes the IIT-Bombay corpus would do any better.</p></li>
+<li><p>See how well one dataset transfers to other - use these edge-weights as a metric to combine datasets for a better training set.</p></li>
+</ul>
+<h1 id="experiments">Experiments</h1>
+<h2 id="individual-datasets">Individual Datasets</h2>
+<p>The following are the results on the individual corpora that constitutes IIT-B Hindi-English parallel dataset provided.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Section</th>
+<th>B-1</th>
+<th>B-2</th>
+<th>B-3</th>
+<th>B-4</th>
+<th>BLEU</th>
+<th>Perplexity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>gnome</td>
+<td>74.1</td>
+<td>63.7</td>
+<td>58.8</td>
+<td>55.6</td>
+<td>54.87</td>
+<td>1.17</td>
+</tr>
+<tr class="even">
+<td>tanzil</td>
+<td>59.8</td>
+<td>42.2</td>
+<td>37.5</td>
+<td>35.7</td>
+<td>33.54</td>
+<td>1.07</td>
+</tr>
+<tr class="odd">
+<td>ted</td>
+<td>55.6</td>
+<td>30.1</td>
+<td>17.8</td>
+<td>11.0</td>
+<td>23.16</td>
+<td>12.66</td>
+</tr>
+<tr class="even">
+<td>govtweb</td>
+<td>49.2</td>
+<td>23.2</td>
+<td>12.3</td>
+<td>7.3</td>
+<td>14.37</td>
+<td>40.01</td>
+</tr>
+<tr class="odd">
+<td>hiencorp</td>
+<td>45.6</td>
+<td>21.3</td>
+<td>12.1</td>
+<td>7.7</td>
+<td>14.03</td>
+<td>20.41</td>
+</tr>
+<tr class="even">
+<td>mahashabdkosh</td>
+<td>40.6</td>
+<td>16.8</td>
+<td>6.9</td>
+<td>3.3</td>
+<td>10.26</td>
+<td>63.01</td>
+</tr>
+<tr class="odd">
+<td>books</td>
+<td>39.6</td>
+<td>13.0</td>
+<td>4.8</td>
+<td>2.0</td>
+<td>7.29</td>
+<td>41.39</td>
+</tr>
+<tr class="even">
+<td>judicial</td>
+<td>22.6</td>
+<td>4.2</td>
+<td>1.0</td>
+<td>0.3</td>
+<td>1.90</td>
+<td>125.82</td>
+</tr>
+<tr class="odd">
+<td>indicparallel</td>
+<td>4.8</td>
+<td>1.7</td>
+<td>0.9</td>
+<td>0.4</td>
+<td>1.34</td>
+<td>307.91</td>
+</tr>
+<tr class="even">
+<td>opensubs</td>
+<td>32.7</td>
+<td>7.9</td>
+<td>2.9</td>
+<td>0.8</td>
+<td>1.25</td>
+<td>123.40</td>
+</tr>
+<tr class="odd">
+<td>kde</td>
+<td>2.7</td>
+<td>1.1</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>255.67</td>
+</tr>
+<tr class="even">
+<td>wikihead</td>
+<td>9.2</td>
+<td>6.7</td>
+<td>2.9</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>1252.89</td>
+</tr>
+<tr class="odd">
+<td>hienwnetlinkage</td>
+<td>0.1</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>1485.97</td>
+</tr>
+<tr class="even">
+<td>tatoeba</td>
+<td>22.7</td>
+<td>4.1</td>
+<td>0.2</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>199.22</td>
+</tr>
+<tr class="odd">
+<td><strong>whole</strong></td>
+<td><strong>11.4</strong></td>
+<td><strong>1.0</strong></td>
+<td><strong>1.2</strong></td>
+<td><strong>0.1</strong></td>
+<td><strong>0.0</strong></td>
+<td><strong>173.68</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Some notes: 1. I’m using <code>train, dev, test = (0.8, 0.05, 0.15)</code> for the individual corpus, randomly sampling for all three, without replacement. 2. The <strong>whole</strong> values are reported on IIT-B parallel dataset splits of <code>train, dev, test</code>.</p>
+<h2 id="transfer-across-constituents">Transfer across constituents</h2>
+<p>My experiments are similar to the ones performed in <a href="https://arxiv.org/abs/1706.03872">Six Challenges for Neural Machine Translation</a>. I’m using only subsets of the corpus wherein the perplexity is reported to be low/high-BLEU is reported on the individual training, since I don’t expect the others to transfer at all.</p>
+<p>BLEU scores are reported below, upon transfer from columns to the dataset indicated on the row.</p>
+<table>
+<thead>
+<tr class="header">
+<th>transfer</th>
+<th>books</th>
+<th>govtweb</th>
+<th>hiencorp</th>
+<th>tanzil</th>
+<th>ted</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>books</td>
+<td>7.29</td>
+<td>3.92</td>
+<td>5.11</td>
+<td>0.15</td>
+<td>2.36</td>
+</tr>
+<tr class="even">
+<td>gnome</td>
+<td>0.86</td>
+<td>4.17</td>
+<td><strong>39.86</strong></td>
+<td>0.0</td>
+<td>4.33</td>
+</tr>
+<tr class="odd">
+<td>govtweb</td>
+<td><strong>9.57</strong></td>
+<td><strong>14.37</strong></td>
+<td>9.7</td>
+<td>0.07</td>
+<td>3.67</td>
+</tr>
+<tr class="even">
+<td>hiencorp</td>
+<td>3.92</td>
+<td>4.41</td>
+<td>14.03</td>
+<td>0.1</td>
+<td>2.91</td>
+</tr>
+<tr class="odd">
+<td>hienwnetlinkage</td>
+<td>0.0</td>
+<td>0.26</td>
+<td>0.95</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td>indicparallel</td>
+<td>4.37</td>
+<td>3.31</td>
+<td><strong>19.58</strong></td>
+<td>0.0</td>
+<td>1.41</td>
+</tr>
+<tr class="odd">
+<td>judicial</td>
+<td>8.16</td>
+<td>8.27</td>
+<td>8.47</td>
+<td>0.0</td>
+<td>5.03</td>
+</tr>
+<tr class="even">
+<td>kde</td>
+<td>0.45</td>
+<td><strong>12.88</strong></td>
+<td><strong>13.51</strong></td>
+<td>0.0</td>
+<td>6.89</td>
+</tr>
+<tr class="odd">
+<td>mahashabdkosh</td>
+<td>7.31</td>
+<td>9.44</td>
+<td>6.99</td>
+<td>0.0</td>
+<td>5.08</td>
+</tr>
+<tr class="even">
+<td>opensubs</td>
+<td>3.05</td>
+<td>4.01</td>
+<td>6.46</td>
+<td>0.0</td>
+<td><strong>11.83</strong></td>
+</tr>
+<tr class="odd">
+<td>tanzil</td>
+<td>1.16</td>
+<td>0.53</td>
+<td>1.01</td>
+<td><strong>33.54</strong></td>
+<td>0.82</td>
+</tr>
+<tr class="even">
+<td>tatoeba</td>
+<td><strong>11.51</strong></td>
+<td><strong>12.58</strong></td>
+<td><strong>16.1</strong></td>
+<td>0.42</td>
+<td>7.22</td>
+</tr>
+<tr class="odd">
+<td>ted</td>
+<td>4.79</td>
+<td>6.89</td>
+<td>9.48</td>
+<td>0.23</td>
+<td><strong>23.16</strong></td>
+</tr>
+<tr class="even">
+<td>wikihead</td>
+<td>0.17</td>
+<td>7.78</td>
+<td><strong>36.13</strong></td>
+<td>0.0</td>
+<td>0.84</td>
+</tr>
+<tr class="odd">
+<td><strong>iitb-parallel</strong></td>
+<td><strong>5.04</strong></td>
+<td><strong>5.37</strong></td>
+<td><strong>5.37</strong></td>
+<td><strong>0.0</strong></td>
+<td><strong>3.96</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="inferences">Inferences</h3>
+<p>I’m putting forth the following take-aways from the above table.</p>
+<ul>
+<li>Looks to me like books, govtweb, hiencorp and ted are what would be useful part of the datasets which would generalize to the dev/test sets given - news crawls.</li>
+<li>I’ll however try a few more combinations, see the variation.</li>
+<li>Distributions distant from the test set may end up hurting the model, trying to generalize on a more diverse corpus.
+<ul>
+<li>I’m going to call tanzil, gnome, kde, dictionaries - mostly noise and distant.</li>
+</ul></li>
+<li><strong>hiencorp</strong> transfers well to <strong>gnome</strong> - this is unexpected. Perhaps the same scenario in the larger dataset applies to hiencorp as well.</li>
+</ul>
+<h2 id="refining-training-data-based-on-transfer-stats">Refining training data based on transfer stats</h2>
+<p>I’ll try just IIT-B test set now, using models trained on combination of the above corpora.</p>
+<h3 id="quantitative">Quantitative</h3>
+<p>The percentage of actual training data used to obtain the BLEU is indicated. We’re able to achieve better results with a fraction of the training set.</p>
+<table>
+<thead>
+<tr class="header">
+<th>combination</th>
+<th>% of iitb-train</th>
+<th>BLEU on iitb-test</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>govtweb + hiencorp + ted + tatoeba + indicparallel + opensubs</td>
+<td>24.28</td>
+<td>9.62</td>
+</tr>
+<tr class="even">
+<td>govtweb + hiencorp + ted</td>
+<td>23.24</td>
+<td>9.94</td>
+</tr>
+<tr class="odd">
+<td>govtweb + ted + books</td>
+<td>21.03</td>
+<td>10.22</td>
+</tr>
+<tr class="even">
+<td>govtweb + hiencorp + ted + books + wikihead</td>
+<td>37.18</td>
+<td>10.50</td>
+</tr>
+<tr class="odd">
+<td>govtweb + hiencorp + ted + books</td>
+<td>35.41</td>
+<td>10.86</td>
+</tr>
+</tbody>
+</table>
+<h3 id="qualitative">Qualitative</h3>
+<p>10 is reasonably good enough BLEU for translations to make sense. At this point, it may be a good idea to <a href="https://jerinphilip.github.io/d3-sandbox/exps/iitb-debug/">look at data</a>.<br />
+The translations for refined-4 are most likely the best. And most make sense, they’re not complete garbage at the very least.</p>
+<h3 id="conclusions">Conclusions</h3>
+<p>I think it’s reasonable enough to make the following conclusions at this point:</p>
+<ul>
+<li><p>BLEU is a bad, horrible metric. At least, for NMT based approaches, we need a consensus based metric with multiple hypotheses for an input sentence.</p></li>
+<li>IITB Hindi English Corpus is a disaster. Maybe a necessary evil to some people - but I’d say more trouble than it’s worth.
+<ul>
+<li>Corpus has collected data from a mountain load of sources, most of which are practically useless in generalizing to newscrawl.</li>
+<li>I’m not even sure if the test set is learnable at all from the train-set. When creating datasets to benchmark - at least the train set should contain data enough to learn a distribution which the test is also drawn from. I’m pretty certain test-set contains completely new vocabularies.</li>
+<li>There is scope for releasing a new natural dataset, than this mess of a dataset.</li>
+</ul></li>
+</ul>
+<h1 id="forward">Forward</h1>
+<h3 id="better-data-sampling">Better(?) Data Sampling</h3>
+<p>Related: <a href="https://arxiv.org/pdf/1708.00712.pdf">Dynamic Data Selection for NMT</a></p>
+<p>One thing I’ve seen a lot while training character language models are that frequent patterns are learnt quickly - and the perplexities of these tend to be lower.</p>
+<p>OpenNMT-py has a <a href="http://forum.opennmt.net/t/metrics-bleu-ppl-gold-ppl-pred/249">bunch of metrics</a> which quantify the above, and I believe these maybe of use to capture what would be the trainable “good” corpus within the training set.</p></div>
+
+
+                            
+</div>
+
+<div class="row">
+
+<div class="col-md-8 col-sm-12" id="disqus_thread"></div>
+<script>
+
+var disqus_config = function () {
+    this.page.title = 'IITB Hindi English - Usable Corpus; Hidden Troubles'
+    this.page.url = 'https://jerinphilip.github.io/posts/iitb-transfer-check.html';  // Replace PAGE_URL with your page's canonical URL variable
+    this.page.identifier = '/posts/iitb-transfer-check.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://jerinphilip.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
