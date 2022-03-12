@@ -65,7 +65,7 @@
 </div>
 
 <div class="row">
-    <div class="toc col-md-4 col-sm-12 push-md-8"><h6>Outline</h6><ul>
+    <div class="toc col-md-4 col-sm-12 order-second sticky-top"><h6>Outline</h6><ul>
 <li><a href="#premise">Premise</a></li>
 <li><a href="#lets-sample">Let’s sample</a><ul>
 <li><a href="#inverse-transform-sampling">Inverse Transform Sampling</a></li>
@@ -74,7 +74,7 @@
 <li><a href="#karpathys-char-rnn">Karpathy’s Char RNN</a><ul>
 <li><a href="#temperature">Temperature</a></li>
 </ul></li>
-</ul></div><div class="col-md-8 col-sm-12 post-content"><h1 id="premise">Premise</h1>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-first"><h1 id="premise">Premise</h1>
 <p>The objective we start with simple. I have a device which can get me a random number, hopefully uniformly distributed. Now using this device, I’m to generate other distributions.</p>
 <p>I’ve most likely come across fragments of code which does this, without being able to generalize. I can recollect sometime back, when <a href="https://researchweb.iiit.ac.in/~harishkrishna.v/">Harish</a> told me something about taking a cumulative distribution function (CDF) and projecting on the y-axis, but <a href="https://en.wikipedia.org/wiki/Inverse_transform_sampling#Examples">it</a> never really sunk in.</p>
 <p>When I took Topics in Machine Learning in my undergrad final year, <a href="https://jeremykun.com/2013/11/08/adversarial-bandits-and-the-exp3-algorithm/">EXP3</a> algorithm in a Multi-Arm Bandit setting required me to draw an arm with the probabilities of the arms being updated at every step. I figured Jeremy Kun’s code segment was enough under the time constraints - and forgot about it in a while.</p>
