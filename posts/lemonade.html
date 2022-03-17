@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Lemonade IME" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/lemonade.html" />
+        <title>Lemonade IME</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Lemonade IME</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Mar 12, 2022</div>
+
+         
+
+         
+            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ui.html">ui</a>, <a href="../tags/posts/linux.html">linux</a>, <a href="../tags/posts/ime.html">ime</a>, <a href="../tags/posts/cpp.html">cpp</a>, <a href="../tags/posts/bergamot.html">bergamot</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#lemonade-ime">Lemonade IME</a><ul>
+<li><a href="#verifiying-machine-generated-translations">Verifiying machine-generated translations</a></li>
+<li><a href="#screencasts">Screencasts</a></li>
+</ul></li>
+<li><a href="#what-next">What next?</a><ul>
+<li><a href="#uiux">UI/UX</a></li>
+<li><a href="#development">Development</a></li>
+</ul></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><small> This post is an account of the implementation of an Input Method Engine (IME) for translation through Intelligent Input Bus (iBus) - a software available on modern Linux desktop environments. </small></p>
+<p>Most of my work in the last years have been in the vicinity of building a library for on-device machine translation. In one exchange over GitHub, I was tasked with implementing the underlying library requirements for <em><a href="https://docs.google.com/presentation/d/15ah2n58GfbP8B97nUrfl9HdKSP3Vh71-W6vZNr37eOk/">Outbound Translation</a></em> . In essence, it refers to the concept of user enter in a source language which the user knows and a software layer intercepts it to provide the target language content.</p>
+<p>This problem immediately resonated with me. At some point during my internship at NAVER LABS Europe when I stayed in France, I had to contact La Poste customer care. Calling them up was out of the question - because my processing power for French audio over phone was worse. Somehow I managed to find this accessibility chat interface where I could “chat” with customer support, using text. What bothered me as a user was that the medium is French and I’m sitting with multiple tabs of Google Translate manually copying and translating content I receive, then translating the content I want to send out from English to French.</p>
+<p>I have been typing my mother tongue - <em>Malayalam</em>, which uses a non-Latin alphabet and has a script of it’s own using an English (US) keyboard since high school. The technology which enabled me to do this at the time was <a href="https://swanalekha.smc.org.in/">Swanalekha</a>. Learning the <a href="https://en.wikipedia.org/wiki/InScript_keyboard">InScript Keyboard</a> looked like a hard effort, and just typing out weird combinations of the alphabet to create the intended alphabet in Malayalam felt like an easier thing to learn. The technology is enabled by iBus - which one can find today in modern Linux based operating systems with <a href="https://help.gnome.org/misc/release-notes/3.6/i18n-ibus.html.en">tight integration to the GNOME Desktop</a> - and enjoys widespread use in inputting non-Latin script by means of a Latin keyboard layout (e.g: English (US)) while providing software layers for non-Latin keyboards.</p>
+<p>In a 1:1 with <a href="https://kheafield.com/">Kenneth Heafield</a>, I bring up the idea of the alternative of the entire outbound translation concept from browser-only to system-wide using the Intelligent Input Bus (iBus). While the know-hows of connecting iBus to the library was not straightforward, the possibility of the solution using both was acknowledged. However, Bergamot Project was more focused on attempting cross-platform and in the browser (on operating systems more than linux), so a pitch for a keyboard layer in the operating system (Linux specific) turned out to be a downside.</p>
+<p>My counterparties at Mozilla collosally delayed the extension’s implementation of Outbound translation, leaving me plenty idle time - some of which could be redirected towards this idea. Since the tools were decided, the solution was not all that complicated. Lemonade iwould implemented in C++ as an engine that implements the <a href="https://ibus.github.io/docs/ibus-1.5/index.html">iBus interface</a>, that connects to the <a href="https://github.com/browsermt/bergamot-translator">bergamot-translator</a> C++ library. Together with the ecosystem (models, fast-nmt engine) built by the Bergamot project, lemonade manages to run the translations completely locally, providing the privacy benefits intended to be achieved by the Bergamot Project. For purposes of building an IME, I found <a href="https://github.com/epico/ibus-libzhuyin">ibus-libzhuyin</a> which I could modify and connect to the Bergamot C++ library to reach a minimum viable product. Non traditional applications like <a href="https://mike-fabian.github.io/ibus-typing-booster/">ibus-typing-booster</a> - further improved my confidence in using iBus.</p>
+<h2 id="lemonade-ime">Lemonade IME</h2>
+<p>The user interacts with iBus through two elements - (1) a panel available system-wide and (2) an input UI in the vicinity of the text area the user intends to input the translated text.</p>
+<p><strong>Panel</strong> The panel, often available in the top-right corner for GNOME allows to choose from available input methods.</p>
+<div class="figure">
+<img src="../static/images/bergamot/lemonade-activated-dropdown.png">
+<p class="caption">
+Lemonade as an iBus engine
+</p>
+</div>
+<p>It also allows the user to switch source language, target language and allows to configure a verify option. For now, <code>xx-&gt;xx</code> is configured to be a passthrough.</p>
+<div class="figure">
+<img src="../static/images/bergamot/lemonade-source-lang-selection.png" width="45%"> <img src="../static/images/bergamot/lemonade-target-lang-selection.png" width="45%">
+<p class="caption">
+Language selection
+</p>
+</div>
+<p><strong>Input UI</strong> The input UI inverts the traditional usage. The existing implementation shows translation as pre-edit text, which is underlined text that is almost entered into the target text area. A commit action by the user inserts the pre-edit text into the text area. The candidate list is used to show the text that is entered in by the user before committing.</p>
+<div class="figure">
+<img src="../static/images/bergamot/libreoffice-without-verify.png" width="100%">
+<p class="caption">
+Using Lemonade IME in LibreOffice
+</p>
+</div>
+<p>While we only have <code>xx-&gt;en</code> and <code>en-&gt;yy</code> models internally, pivoting feature allows for entering <code>xx-&gt;yy</code> by using the models involving English in sequence.</p>
+<h3 id="verifiying-machine-generated-translations">Verifiying machine-generated translations</h3>
+<p>Okay, now that the user is potentially trusting a machine-learning system to intercept and translate the content being put in. <em>Lost in translation</em> is a thing, sometimes with dangerous consequences - <a href="https://www.theguardian.com/technology/2017/oct/24/facebook-palestine-israel-translates-good-morning-attack-them-arrest">including getting detained</a>. How does one boost the users’ confidence in the translated text?</p>
+<p><span class="citation">Zouhar et al. (<a href="#ref-zouhar2021backtranslation">2021</a>)</span> studied this as part of the Bergamot Project and came up with the UI recommendation of providing the backtranslated content additionally to the user. In this setting, we take the translated text and try to translate it back to the source language, which the user understands. If the backtranslated text match, we can be more confident that the text sent in is correct.</p>
+<div class="figure">
+<img src="../static/images/bergamot/lemonade-verify-backtranslation.png" alt="UI controls for verify" />
+<p class="caption">UI controls for verify</p>
+</div>
+<!--
+<div class="figure">
+<img src="/static/images/bergamot/libreoffice-with-verify.png" width=100%>
+<p class="caption">LibreOffice with verification</p>
+</div>
+
+<div class="figure">
+<img src="/static/images/bergamot/deutche-post-form-firefox.png"  width=100%>
+<p class="caption"></p>
+</div>
+-->
+<h3 id="screencasts">Screencasts</h3>
+<p>In the below screencast, I use lemonade (system-level) for outbound translation in conjunction with a local-translation browser extension - <a href="https://github.com/jelmervdl/firefox-translations">jelmervdl/firefox-translations</a>.</p>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/JMY4ANSAKPU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
+encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+</iframe>
+<p>Lemonade also works on other applications, pretty much any text-area by intercepting the keyboard and input method. See different controls being configured on a word-processor.</p>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Lsmpx_A_7Y8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
+encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+</iframe>
+<h2 id="what-next">What next?</h2>
+<p>I am grateful to Kenneth and the UI group in Bergamot to have received attention and feedback for what is a hobby horse side-project. Feedback I have received so-far notes that this is particularly useful in a chat setting, but limited when richer editing requirements are involved.</p>
+<h3 id="uiux">UI/UX</h3>
+<p>Since I managed a few interactions with the UI (Research) team, a lot of the problems highlighted I perceived to be quite hard.</p>
+<p><strong>UI Limitations</strong> The inability to control the UI elements (primarily because of my lack of understanding of iBus) impede complex UI mechanisms. For example, once the pre-edit text is committed, there is no way to backtrack it to the original source text that the user input. This was deemed to be useful when we want complex editing workflows that are quite common on the web. This is however a constraint due to sticking to the iBus specified interface. I am keeping keeping open a <a href="https://github.com/jerinphilip/lemonade/issues/56">web-based</a> input method to gain more development capabilities.</p>
+<p><strong>Flickering</strong> There is an increased instability in the text during translations. This is a necessary evil, as translations are not monotonic in nature and larger contexts lead to drastically different word orderings in the translated text. The modified translation is perhaps more suitable than an incremental one. This is a problem shared by interactive translation research and some speech-translation which requires stability as transcribed speech translations progress.</p>
+<p><strong>Edit workflows</strong> Queries often arose about being able to edit/verify at word levels rather than the sentence levels after an initial draft translation was committed in. Word level editing appears to be quite hard, especially when the signals we have during inference are faint.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/tasks.png" alt="xkcd: Tasks" />
+<p class="caption">xkcd: Tasks</p>
+</div>
+<h3 id="development">Development</h3>
+<p>In the current setting, the implementation uses hardcoded file paths and is reliant on the bergamot python package to fetch and inventory the models. A better position is to eventually connect to <a href="https://github.com/XapaJIaMnu/translateLocally">translateLocally</a>. translateLocally’s vision is perhaps as a cross-platform GUI application - and I’m trying to convince the authors to separate out the application library out so lemonade can pick it up. The pursuit of a <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging">Native Messaging</a> extension in translateLocally brings the features closer to the requirement of lemonade.</p>
+<p>This could also be done using the Python Interface iBus allows for, but at the time Python package for bergamot was not very mature.</p>
+<p>Lemonade source currently sits in <a href="https://github.com/jerinphilip/lemonade">jerinphilip/lemonade</a> under a permissive license. It has a lot of rough edges, which are expected to be smoothened over free time. If you’d like to help out with development, please feel free to drop by the GitHub issues/discussions or even contact me via email.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-zouhar2021backtranslation">
+<p>Vilém Zouhar, Michal Novák, Matúš Žilinec, Ondřej Bojar, Mateo Obregón, Robin L. Hill, Frédéric Blain, Marina Fomicheva, Lucia Specia, and Lisa Yankovskaya. 2021. Backtranslation feedback improves user confidence in MT, not quality. In <em>Proceedings of the 2021 conference of the north american chapter of the association for computational linguistics: Human language technologies</em>, pages 151–161, Online, June. Association for Computational Linguistics.</p>
+</div>
+</div></div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12">
+        <script>
+        var disqus_config = function () {
+            this.page.title = 'Lemonade IME'
+            this.page.url = 'https://jerinphilip.github.io/posts/lemonade.html';  // Replace PAGE_URL with your page's canonical URL variable
+            this.page.identifier = '/posts/lemonade.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+        };
+        (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jerinphilip.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+        })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>

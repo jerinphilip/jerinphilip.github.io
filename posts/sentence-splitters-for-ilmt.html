@@ -63,7 +63,7 @@
 </div>
 
 <div class="row">
-    <div class="toc col-md-4 col-sm-12 order-second sticky-top"><h6>Outline</h6><ul>
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
 <li><a href="#premise">Premise</a></li>
 <li><a href="#rules-vs-learning-from-context">Rules vs Learning from Context</a></li>
 <li><a href="#enter-the-punkttokenizer">Enter the PunktTokenizer</a></li>
@@ -77,7 +77,7 @@
 <li><a href="#merging-into-ilmulti">Merging into ilmulti</a></li>
 <li><a href="#afterthoughts">Afterthoughts</a></li>
 <li><a href="#references">References</a></li>
-</ul></div><div class="col-md-8 col-sm-12 post-content order-first"><p>I had originally built the tooling around my static site generator to actually write a log of <a href="http://preon.iiit.ac.in/~jerin/">my work in CVIT</a>. Much of the content I wrote used to go there, but since I’m out now and free, I have new resolution to convert pieces that won’t make to papers here.</p>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>I had originally built the tooling around my static site generator to actually write a log of <a href="http://preon.iiit.ac.in/~jerin/">my work in CVIT</a>. Much of the content I wrote used to go there, but since I’m out now and free, I have new resolution to convert pieces that won’t make to papers here.</p>
 <p>A lot of my work used to involve playing catch-up with what has already been well-implemented and working for western languages adapting them to Indian Languages. Much of these are worth penning-down, but won’t be strong enough to make to any academic publishing venues. Neither do I have the bandwidth to take it to a full-open-source well-received library now. I will hope pieces like these help out someone foraying into the area in the future.</p>
 <h2 id="premise">Premise</h2>
 <p>The <a href="http://pib.gov.in">Press Information Bureau</a> (PIB) articles are currently a source of training data for us to try out ideas in NMT models. A very low level yet largely critical issue which I have in my Indian Languages Machine Translation pipeline is <strong>sentence-splitting</strong>.</p>
@@ -182,30 +182,25 @@ index 408ce27..e30de2a 100644
 <p>Shashank Siripragada, Jerin Philip, Vinay P. Namboodiri, and C V Jawahar. 2020. A multilingual parallel corpora collection effort for Indian languages. In <em>Proceedings of the 12th language resources and evaluation conference</em>, pages 3743–3751, Marseille, France, May. European Language Resources Association.</p>
 </div>
 </div></div>
-
-
-                            
 </div>
 
 <div class="row">
-
-<div class="col-md-8 col-sm-12" id="disqus_thread"></div>
-<script>
-
-var disqus_config = function () {
-    this.page.title = 'Unsupervised Sentence Tokenization for Indian Languages'
-    this.page.url = 'https://jerinphilip.github.io/posts/sentence-splitters-for-ilmt.html';  // Replace PAGE_URL with your page's canonical URL variable
-    this.page.identifier = '/posts/sentence-splitters-for-ilmt.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
-};
-(function() { // DON'T EDIT BELOW THIS LINE
-var d = document, s = d.createElement('script');
-s.src = 'https://jerinphilip.disqus.com/embed.js';
-s.setAttribute('data-timestamp', +new Date());
-(d.head || d.body).appendChild(s);
-})();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-
+    <div class="col-md-8 col-sm-12">
+        <script>
+        var disqus_config = function () {
+            this.page.title = 'Unsupervised Sentence Tokenization for Indian Languages'
+            this.page.url = 'https://jerinphilip.github.io/posts/sentence-splitters-for-ilmt.html';  // Replace PAGE_URL with your page's canonical URL variable
+            this.page.identifier = '/posts/sentence-splitters-for-ilmt.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+        };
+        (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jerinphilip.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+        })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
 </div>
 
                     </div>
