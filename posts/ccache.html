@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Speeding up builds with ccache" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/ccache.html" />
+        <title>Speeding up builds with ccache</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Speeding up builds with ccache</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Mar 19, 2022</div>
+
+         
+
+         
+            <div><a href="../tags/posts/cpp.html">cpp</a>, <a href="../tags/posts/ci.html">ci</a>, <a href="../tags/posts/github-actions.html">github-actions</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#ccache">ccache</a></li>
+<li><a href="#local-builds">Local builds</a></li>
+<li><a href="#github-actions">GitHub Actions</a></li>
+<li><a href="#outcome">Outcome</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><a href="https://github.com/marian-nmt/marian-dev">marian-dev</a> has builds which takes &gt; 30mins. When I first tried to build marian-dev to edit something in sentencepiece on my personal laptop, a Lenovo ThinkPad X1 carbon - it took ages. Often I had to remove the built files and run a clean build once again. Sometimes I had to build <code>Release</code>, other times <code>Debug</code>. These days I develop on an 80-core Intel Xeon Phi, so the build times are not as much an issue. But still every now and then some noob tries to build the project on their local machine without the know-hows and often takes very very long to finish.</p>
+<p>The same was the case across Windows, Linux and MacOS and cross-compilation targetting WebAssembly via emscripten when I started working for the bergamot-project - all of which had a CI build running. <a href="https://github.com/browsermt/bergamot-translator">bergamot-translator</a> uses a <a href="https://github.com/browsermt/marian-dev">fork</a> of marian-dev and the situation is pretty much the same.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/compiling.png" alt="My code is compiling" />
+<p class="caption">My code is compiling</p>
+</div>
+<p>This was a point of frustration when I started, and over weekends, outside officially assigned tasks I have successfully managed to bring down the time required for each one by one.</p>
+<h2 id="ccache">ccache</h2>
+<p><a href="https://github.com/ccache/ccache">ccache</a> speeds up compilation by using previous compilations. The principle is quite simple - each compilation unit can be associated with <code>(source-file, compiler, compilation-args)</code>. If we hash all 3 and store the cached result somewhere, we will safely be able to reuse it in future compilations.</p>
+<p>ccache, at the time of writing this post, supports most of Linux and gcc/clang, MacOS and AppleClang. It <a href="https://github.com/ccache/ccache/pull/506">recently managed support for MSVC on Windows</a>, although bergamot-translator still uses the fork with a release (We should switch soon, when I have free time). emscripten compiler (<code>emcc</code>) running on any platform <a href="https://github.com/emscripten-core/emscripten/pull/13681">has some form of support</a>. That’s pretty much all our builds - so all that’s left was to slowly add support one-by-one.</p>
+<h2 id="local-builds">Local builds</h2>
+<p>ccache is quite easy to set up for local builds. Chances are ccache is available in your operating system’s official package manager. The following example works with Ubuntu.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">sudo</span> apt-get install ccache 
+$ <span class="fu">cmake</span> <span class="va">$BUILD_DIRECTORY</span>                        \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache        \
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache          \
+    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache  </code></pre></div>
+<p>From there-on, compilation results are going to be cached and we can rely on ccache. Most of my development happens on a Linux system, so I’m sorted. The library, however, is intended to be cross-platform (Windows, Mac, Linux, now Android). Due to Mozilla’s decisions, we also have a WebAssembly target. There’s no way I’m building everything while I local-test unless I am testing parts relevant to the platform. For that, we have GitHub CI.</p>
+<h2 id="github-actions">GitHub Actions</h2>
+<p>bergamot-translator uses GitHub Actions for CI. Not much documentation for GitHub actions existed when I started using it for bergamot-translator, although I found the integrated offering quite convenient. The repository was originally developed in private, but my setting up CI exhausted the private repository minutes (using the more expensive MacOS Runners) in under two days. The solution was to make the development public - no worries, it was meant to be open-sourced anyway. But we were still using more resources than necessary and adding more items to the matrix would have been difficult.</p>
+<p>bergamot-translator compiles with <code>-march=native</code> for some performance reasons. This led to rather fragmented compiler flags as a function of hardware. This is not a problem when I am on my development machine and the hardware remains the same. But GitHub runners, we’ve discovered are not uniform - some have <code>avx512</code> capabilities while others have <code>avx2</code> capabilities.</p>
+<p>The general skeleton on optimizing build turnaround time with ccache on GitHub actions is the same across platforms. I use the environment to store a bunch of variables, these extend to <code>$GITHUB_ENV</code>, but I’d want to reuse the variable store in a matrix as well so the structure looks like the following:</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="fu">env:</span>
+  <span class="fu">ccache_basedir:</span><span class="at"> ${{ github.workspace }}</span>
+  <span class="fu">ccache_dir:</span><span class="at"> </span><span class="st">&quot;${{ github.workspace }}/.ccache&quot;</span>
+  <span class="fu">ccache_compilercheck:</span><span class="at"> content</span>
+  <span class="fu">ccache_compress:</span><span class="at"> </span><span class="st">'true'</span>
+  <span class="fu">ccache_compresslevel:</span><span class="at"> 9</span>
+  <span class="fu">ccache_maxsize:</span><span class="at"> 200M</span>
+  <span class="fu">ccache_cmake:</span><span class="at"> -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache</span></code></pre></div>
+<p>The place to store <code>$CCACHE_DIR</code> is GitHub and needs to sustain across builds. The following generates variables to sort the lookup by recency on the working PR.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Generate ccache_vars for ccache based on machine</span>
+  <span class="fu">shell:</span><span class="at"> bash</span>
+  <span class="fu">id:</span><span class="at"> ccache_vars</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    <span class="fu">echo &quot;:</span><span class="at">:set-output name=hash::$(echo ${{ env.ccache_compilercheck }})&quot;</span>
+    <span class="fu">echo &quot;:</span><span class="at">:set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')&quot;</span></code></pre></div>
+<p>If the first commit, we may alternatively look into the last built <code>main</code> branch.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Cache-op for build-cache through ccache</span>
+  <span class="fu">uses:</span><span class="at"> actions/cache@v2</span>
+  <span class="fu">with:</span>
+    <span class="fu">path:</span><span class="at"> ${{ env.ccache_dir }}</span>
+    <span class="fu">key:</span><span class="at"> ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}</span>
+    <span class="fu">restore-keys:</span><span class="at"> |-</span>
+      ccache-$<span class="kw">{</span>{ matrix.identifier <span class="kw">}</span>}-$<span class="kw">{</span>{ steps.ccache_vars.outputs.hash <span class="kw">}</span>}-$<span class="kw">{</span>{ github.ref <span class="kw">}</span>}
+      ccache-$<span class="kw">{</span>{ matrix.identifier <span class="kw">}</span>}-$<span class="kw">{</span>{ steps.ccache_vars.outputs.hash <span class="kw">}</span>}
+      ccache-$<span class="kw">{</span>{ matrix.identifier <span class="kw">}</span>}</code></pre></div>
+<p>The following is redundant and over-engineered, but I like to keep things this way for swappability of <code>env.var</code> and <code>matrix.var</code>.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache environment setup</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    echo <span class="st">&quot;CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_BASEDIR=${{ env.ccache_basedir }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_COMPRESS=${{ env.ccache_compress }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_DIR=${{ env.ccache_dir }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_MAXSIZE=${{ env.ccache_maxsize }}&quot;</span> &gt;&gt; $GITHUB_ENV</code></pre></div>
+<p>I often leave a prolog and epolog step to diagnose over CI whether the cache is working as intended.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache prolog</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    ccache -s <span class="co"># Print current cache stats</span>
+    ccache -z <span class="co"># Zero cache entry</span>
+
+<span class="co"># Build commands go here.</span>
+
+<span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache epilog</span>
+  <span class="fu">run:</span><span class="at"> |</span>
+    ccache -s <span class="co"># Print current cache stats</span></code></pre></div>
+<p>With the above skeleton, turns out it is actually quite easy to set it all up. Ignoring the countless hours spent debugging how a container rolled out in a machine somewhere with feedback turnaround absurd high until the cache started working, of course. Now I get to copy-paste the above and speed up compilations across my projects.</p>
+<p><strong>Linux / MacOS</strong> Linux/MacOS both worked quite out of the box with the above setup, and both had the bash shell.</p>
+<p><strong>Python</strong> The python shared library via pybind11 used the gcc or clang under Linux to build, so getting this one was as simple as copying over the Linux YAML lines and adding a bunch of python keys.</p>
+<p><strong>Android cross-compilation</strong> Android cross-compilation is used as “it builds” check on CI for ARM backend, which I’m pursuing at the time of writing this post. Since CMake has nice integrations as visible above, cross-compiling with a toolchain allowed me to use ccache with minimal changes required.</p>
+<p><strong>Windows</strong> Windows was the odd one. Compiling things on Windows with MSVC especially has never been a fun experience. I don’t think much of the developer crowd like this either.</p>
+<p>Most of the implementation followed <a href="https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/">Speeding up C++ GitHub Actions using ccache</a>. It took some time and searching and trial and error to get it to work, and the functionality is integrated now - <a href="https://github.com/browsermt/bergamot-translator/pull/308">bergamot-translator#308</a>. Because <code>bash</code> wasn’t available, <code>cmake</code> was used to generate timestamps and such required.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Download ccache</span>
+  <span class="fu">shell:</span><span class="at"> cmake -P {0}</span>
+  <span class="fu">run:</span><span class="at"> |</span>
+    <span class="fu">set(ccache_url &quot;https:</span><span class="at">//github.com/cristianadam/ccache/releases/download/v${{ env.ccache_version }}/${{ runner.os }}.tar.xz&quot;)</span>
+    file(DOWNLOAD <span class="st">&quot;${ccache_url}&quot;</span> ./ccache.tar.xz SHOW_PROGRESS)
+    execute_process(COMMAND $<span class="kw">{</span>CMAKE_COMMAND<span class="kw">}</span> -E tar xvf ./ccache.tar.xz)
+    if(ret AND NOT ret EQUAL 0)
+      message( FATAL_ERROR <span class="st">&quot;Bad exit status&quot;</span>)
+    endif()</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Generate ccache_vars for ccache based on machine</span>
+  <span class="fu">shell:</span><span class="at"> cmake -P {0}</span>
+  <span class="fu">id:</span><span class="at"> ccache_vars</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    string(TIMESTAMP current_date <span class="st">&quot;%Y-%m-%d-%H;%M;%S&quot;</span> UTC)
+    <span class="fu">message(&quot;:</span><span class="at">:set-output name=timestamp::${current_date}&quot;)</span>
+    <span class="fu">message(&quot;:</span><span class="at">:set-output name=hash::${{ env.ccache_compilercheck }}&quot;)</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache prolog</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    $<span class="kw">{</span>{github.workspace<span class="kw">}</span>}\ccache.exe -sv <span class="co"># Print current cache stats</span>
+    $<span class="kw">{</span>{github.workspace<span class="kw">}</span>}\ccache.exe -z <span class="co"># Print current cache stats</span>
+
+<span class="co"># Insert build command here.</span>
+
+<span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache epilog</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    $<span class="kw">{</span>{github.workspace<span class="kw">}</span>}\ccache.exe -sv <span class="co"># Print current cache stats</span></code></pre></div>
+<p>Some MSVC flags like <code>/Zi</code> where unfriendly to cache, so had to get rid of that (it was debug information, most likely).</p>
+<p>Few dependencies (<code>pcre2</code>, <code>protobuf</code>) comes via <code>vcpkg</code> and are slower than what I’d want at the moment. We will look into speeding this up eventually.</p>
+<p><strong>emscripten</strong> The emscripten ccache mostly referred to <a href="https://github.com/pyodide/pyodide/pull/1805">pyiodide implementation</a>. Weird flex, but <code>emcc</code> uses <code>ccache</code> compiled onto WebAssembly target and then uses it further in compilation. Since WebAssembly is intended to be a portable target - I made a choice the ccache builds cached.</p>
+<p><strong>Further optimizations</strong> Originally marian-dev provided builds with debug info (<code>-DCMAKE_BUILD_TYPE=RelWithDebInfo</code>), which was inherited by bergamot-translator. This meant the compiled units had information on which lines which instructions correspond to and the information increases the size on the disk. Larger object files meant longer to compile and also getting into trouble with GitHub’s free limits.</p>
+<h2 id="outcome">Outcome</h2>
+<p>Compilation turnaround times we reduced as follows (in minutes):</p>
+<ol style="list-style-type: decimal">
+<li>Linux: 25m ➔ 5m</li>
+<li>MacOS: 30m ➔ 6m</li>
+<li>WebAssembly: 15m ➔ 5m (2m if optimized further)</li>
+<li>Python: 30m ➔ 6m</li>
+<li>Windows: 30m ➔ 10m (depending on <code>vcpkg</code> being nice).</li>
+</ol>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/the_general_problem.png" alt="It has indeed saved time in the long run." />
+<p class="caption">It has indeed saved time in the long run.</p>
+</div>
+<p>Good enough to be picked up by downstream repositories as well, turns out: <a href="https://github.com/XapaJIaMnu/translateLocally/commit/a4e3e3b40e1baf955198763e99480b62495cde16">XapaJIaMnu/translateLocally@a4e3e3b</a>.</p>
+<p>While this has served to reduce the compute footprint, turnaround time for developers, the ability gained by ccache has also encouraged me to add more builds - most certainly an instance of <a href="https://en.wikipedia.org/wiki/Jevons_paradox">Jevons Paradox</a>.</p>
+<p>Cache Invalidation is a potential problem. If at some point in the future some bug corrupts a cache entry, builds can fail. The assumption is that this does not happen often, even if it does, we can just edit a flag to recache and then the builds will go back to work.</p></div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12" id="disqus_thread">
+        <script>
+        var disqus_config = function () {
+            this.page.title = 'Speeding up builds with ccache'
+            this.page.url = 'https://jerinphilip.github.io/posts/ccache.html';  // Replace PAGE_URL with your page's canonical URL variable
+            this.page.identifier = '/posts/ccache.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+        };
+        (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jerinphilip.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+        })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
