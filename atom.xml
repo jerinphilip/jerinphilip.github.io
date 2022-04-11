@@ -1,0 +1,2890 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Jerin Philip's blog</title>
+    <link href="http://jerinphilip.github.io/atom.xml" rel="self" />
+    <link href="http://jerinphilip.github.io" />
+    <id>http://jerinphilip.github.io/atom.xml</id>
+    <author>
+        <name>Jerin Philip</name>
+        <email>jerinphilip@live.in</email>
+    </author>
+    <updated>2022-03-19T00:00:00Z</updated>
+    <entry>
+    <title>Speeding up builds with ccache</title>
+    <link href="http://jerinphilip.github.io/posts/ccache.html" />
+    <id>http://jerinphilip.github.io/posts/ccache.html</id>
+    <published>2022-03-19T00:00:00Z</published>
+    <updated>2022-03-19T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Speeding up builds with ccache" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/ccache.html" />
+        <title>Speeding up builds with ccache</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Speeding up builds with ccache</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Mar 19, 2022</div>
+
+         
+
+         
+            <div><a href="../tags/posts/cpp.html">cpp</a>, <a href="../tags/posts/ci.html">ci</a>, <a href="../tags/posts/github-actions.html">github-actions</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#ccache">ccache</a></li>
+<li><a href="#local-builds">Local builds</a></li>
+<li><a href="#github-actions">GitHub Actions</a></li>
+<li><a href="#outcome">Outcome</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><a href="https://github.com/marian-nmt/marian-dev">marian-dev</a> has builds which takes &gt; 30mins. When I first tried to build marian-dev to edit something in sentencepiece on my personal laptop, a Lenovo ThinkPad X1 carbon - it took ages. Often I had to remove the built files and run a clean build once again. Sometimes I had to build <code>Release</code>, other times <code>Debug</code>. These days I develop on an 80-core Intel Xeon Phi, so the build times are not as much an issue. But still every now and then some noob tries to build the project on their local machine without the know-hows and often takes very very long to finish.</p>
+<p>The same was the case across Windows, Linux and MacOS and cross-compilation targetting WebAssembly via emscripten when I started working for the bergamot-project - all of which had a CI build running. <a href="https://github.com/browsermt/bergamot-translator">bergamot-translator</a> uses a <a href="https://github.com/browsermt/marian-dev">fork</a> of marian-dev and the situation is pretty much the same.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/compiling.png" alt="My code is compiling" />
+<p class="caption">My code is compiling</p>
+</div>
+<p>This was a point of frustration when I started, and over weekends, outside officially assigned tasks I have successfully managed to bring down the time required for each one by one.</p>
+<h2 id="ccache">ccache</h2>
+<p><a href="https://github.com/ccache/ccache">ccache</a> speeds up compilation by using previous compilations. The principle is quite simple - each compilation unit can be associated with <code>(source-file, compiler, compilation-args)</code>. If we hash all 3 and store the cached result somewhere, we will safely be able to reuse it in future compilations.</p>
+<p>ccache, at the time of writing this post, supports most of Linux and gcc/clang, MacOS and AppleClang. It <a href="https://github.com/ccache/ccache/pull/506">recently managed support for MSVC on Windows</a>, although bergamot-translator still uses the fork with a release (We should switch soon, when I have free time). emscripten compiler (<code>emcc</code>) running on any platform <a href="https://github.com/emscripten-core/emscripten/pull/13681">has some form of support</a>. That’s pretty much all our builds - so all that’s left was to slowly add support one-by-one.</p>
+<h2 id="local-builds">Local builds</h2>
+<p>ccache is quite easy to set up for local builds. Chances are ccache is available in your operating system’s official package manager. The following example works with Ubuntu.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">sudo</span> apt-get install ccache 
+$ <span class="fu">cmake</span> <span class="va">$BUILD_DIRECTORY</span>                        \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache        \
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache          \
+    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache  </code></pre></div>
+<p>From there-on, compilation results are going to be cached and we can rely on ccache. Most of my development happens on a Linux system, so I’m sorted. The library, however, is intended to be cross-platform (Windows, Mac, Linux, now Android). Due to Mozilla’s decisions, we also have a WebAssembly target. There’s no way I’m building everything while I local-test unless I am testing parts relevant to the platform. For that, we have GitHub CI.</p>
+<h2 id="github-actions">GitHub Actions</h2>
+<p>bergamot-translator uses GitHub Actions for CI. Not much documentation for GitHub actions existed when I started using it for bergamot-translator, although I found the integrated offering quite convenient. The repository was originally developed in private, but my setting up CI exhausted the private repository minutes (using the more expensive MacOS Runners) in under two days. The solution was to make the development public - no worries, it was meant to be open-sourced anyway. But we were still using more resources than necessary and adding more items to the matrix would have been difficult.</p>
+<p>bergamot-translator compiles with <code>-march=native</code> for some performance reasons. This led to rather fragmented compiler flags as a function of hardware. This is not a problem when I am on my development machine and the hardware remains the same. But GitHub runners, we’ve discovered are not uniform - some have <code>avx512</code> capabilities while others have <code>avx2</code> capabilities.</p>
+<p>The general skeleton on optimizing build turnaround time with ccache on GitHub actions is the same across platforms. I use the environment to store a bunch of variables, these extend to <code>$GITHUB_ENV</code>, but I’d want to reuse the variable store in a matrix as well so the structure looks like the following:</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="fu">env:</span>
+  <span class="fu">ccache_basedir:</span><span class="at"> ${{ github.workspace }}</span>
+  <span class="fu">ccache_dir:</span><span class="at"> </span><span class="st">&quot;${{ github.workspace }}/.ccache&quot;</span>
+  <span class="fu">ccache_compilercheck:</span><span class="at"> content</span>
+  <span class="fu">ccache_compress:</span><span class="at"> </span><span class="st">'true'</span>
+  <span class="fu">ccache_compresslevel:</span><span class="at"> 9</span>
+  <span class="fu">ccache_maxsize:</span><span class="at"> 200M</span>
+  <span class="fu">ccache_cmake:</span><span class="at"> -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache</span></code></pre></div>
+<p>The place to store <code>$CCACHE_DIR</code> is GitHub and needs to sustain across builds. The following generates variables to sort the lookup by recency on the working PR.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Generate ccache_vars for ccache based on machine</span>
+  <span class="fu">shell:</span><span class="at"> bash</span>
+  <span class="fu">id:</span><span class="at"> ccache_vars</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    <span class="fu">echo &quot;:</span><span class="at">:set-output name=hash::$(echo ${{ env.ccache_compilercheck }})&quot;</span>
+    <span class="fu">echo &quot;:</span><span class="at">:set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')&quot;</span></code></pre></div>
+<p>If the first commit, we may alternatively look into the last built <code>main</code> branch.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Cache-op for build-cache through ccache</span>
+  <span class="fu">uses:</span><span class="at"> actions/cache@v2</span>
+  <span class="fu">with:</span>
+    <span class="fu">path:</span><span class="at"> ${{ env.ccache_dir }}</span>
+    <span class="fu">key:</span><span class="at"> ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}</span>
+    <span class="fu">restore-keys:</span><span class="at"> |-</span>
+      ccache-$<span class="kw">{</span>{ matrix.identifier <span class="kw">}</span>}-$<span class="kw">{</span>{ steps.ccache_vars.outputs.hash <span class="kw">}</span>}-$<span class="kw">{</span>{ github.ref <span class="kw">}</span>}
+      ccache-$<span class="kw">{</span>{ matrix.identifier <span class="kw">}</span>}-$<span class="kw">{</span>{ steps.ccache_vars.outputs.hash <span class="kw">}</span>}
+      ccache-$<span class="kw">{</span>{ matrix.identifier <span class="kw">}</span>}</code></pre></div>
+<p>The following is redundant and over-engineered, but I like to keep things this way for swappability of <code>env.var</code> and <code>matrix.var</code>.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache environment setup</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    echo <span class="st">&quot;CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_BASEDIR=${{ env.ccache_basedir }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_COMPRESS=${{ env.ccache_compress }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_DIR=${{ env.ccache_dir }}&quot;</span> &gt;&gt; $GITHUB_ENV
+    echo <span class="st">&quot;CCACHE_MAXSIZE=${{ env.ccache_maxsize }}&quot;</span> &gt;&gt; $GITHUB_ENV</code></pre></div>
+<p>I often leave a prolog and epolog step to diagnose over CI whether the cache is working as intended.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache prolog</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    ccache -s <span class="co"># Print current cache stats</span>
+    ccache -z <span class="co"># Zero cache entry</span>
+
+<span class="co"># Build commands go here.</span>
+
+<span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache epilog</span>
+  <span class="fu">run:</span><span class="at"> |</span>
+    ccache -s <span class="co"># Print current cache stats</span></code></pre></div>
+<p>With the above skeleton, turns out it is actually quite easy to set it all up. Ignoring the countless hours spent debugging how a container rolled out in a machine somewhere with feedback turnaround absurd high until the cache started working, of course. Now I get to copy-paste the above and speed up compilations across my projects.</p>
+<p><strong>Linux / MacOS</strong> Linux/MacOS both worked quite out of the box with the above setup, and both had the bash shell.</p>
+<p><strong>Python</strong> The python shared library via pybind11 used the gcc or clang under Linux to build, so getting this one was as simple as copying over the Linux YAML lines and adding a bunch of python keys.</p>
+<p><strong>Android cross-compilation</strong> Android cross-compilation is used as “it builds” check on CI for ARM backend, which I’m pursuing at the time of writing this post. Since CMake has nice integrations as visible above, cross-compiling with a toolchain allowed me to use ccache with minimal changes required.</p>
+<p><strong>Windows</strong> Windows was the odd one. Compiling things on Windows with MSVC especially has never been a fun experience. I don’t think much of the developer crowd like this either.</p>
+<p>Most of the implementation followed <a href="https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/">Speeding up C++ GitHub Actions using ccache</a>. It took some time and searching and trial and error to get it to work, and the functionality is integrated now - <a href="https://github.com/browsermt/bergamot-translator/pull/308">bergamot-translator#308</a>. Because <code>bash</code> wasn’t available, <code>cmake</code> was used to generate timestamps and such required.</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Download ccache</span>
+  <span class="fu">shell:</span><span class="at"> cmake -P {0}</span>
+  <span class="fu">run:</span><span class="at"> |</span>
+    <span class="fu">set(ccache_url &quot;https:</span><span class="at">//github.com/cristianadam/ccache/releases/download/v${{ env.ccache_version }}/${{ runner.os }}.tar.xz&quot;)</span>
+    file(DOWNLOAD <span class="st">&quot;${ccache_url}&quot;</span> ./ccache.tar.xz SHOW_PROGRESS)
+    execute_process(COMMAND $<span class="kw">{</span>CMAKE_COMMAND<span class="kw">}</span> -E tar xvf ./ccache.tar.xz)
+    if(ret AND NOT ret EQUAL 0)
+      message( FATAL_ERROR <span class="st">&quot;Bad exit status&quot;</span>)
+    endif()</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> Generate ccache_vars for ccache based on machine</span>
+  <span class="fu">shell:</span><span class="at"> cmake -P {0}</span>
+  <span class="fu">id:</span><span class="at"> ccache_vars</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    string(TIMESTAMP current_date <span class="st">&quot;%Y-%m-%d-%H;%M;%S&quot;</span> UTC)
+    <span class="fu">message(&quot;:</span><span class="at">:set-output name=timestamp::${current_date}&quot;)</span>
+    <span class="fu">message(&quot;:</span><span class="at">:set-output name=hash::${{ env.ccache_compilercheck }}&quot;)</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache prolog</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    $<span class="kw">{</span>{github.workspace<span class="kw">}</span>}\ccache.exe -sv <span class="co"># Print current cache stats</span>
+    $<span class="kw">{</span>{github.workspace<span class="kw">}</span>}\ccache.exe -z <span class="co"># Print current cache stats</span>
+
+<span class="co"># Insert build command here.</span>
+
+<span class="kw">-</span> <span class="fu">name:</span><span class="at"> ccache epilog</span>
+  <span class="fu">run:</span><span class="at"> |-</span>
+    $<span class="kw">{</span>{github.workspace<span class="kw">}</span>}\ccache.exe -sv <span class="co"># Print current cache stats</span></code></pre></div>
+<p>Some MSVC flags like <code>/Zi</code> where unfriendly to cache, so had to get rid of that (it was debug information, most likely).</p>
+<p>Few dependencies (<code>pcre2</code>, <code>protobuf</code>) comes via <code>vcpkg</code> and are slower than what I’d want at the moment. We will look into speeding this up eventually.</p>
+<p><strong>emscripten</strong> The emscripten ccache mostly referred to <a href="https://github.com/pyodide/pyodide/pull/1805">pyiodide implementation</a>. Weird flex, but <code>emcc</code> uses <code>ccache</code> compiled onto WebAssembly target and then uses it further in compilation. Since WebAssembly is intended to be a portable target - I made a choice the ccache builds cached.</p>
+<p><strong>Further optimizations</strong> Originally marian-dev provided builds with debug info (<code>-DCMAKE_BUILD_TYPE=RelWithDebInfo</code>), which was inherited by bergamot-translator. This meant the compiled units had information on which lines which instructions correspond to and the information increases the size on the disk. Larger object files meant longer to compile and also getting into trouble with GitHub’s free limits.</p>
+<h2 id="outcome">Outcome</h2>
+<p>Compilation turnaround times we reduced as follows (in minutes):</p>
+<ol style="list-style-type: decimal">
+<li>Linux: 25m ➔ 5m</li>
+<li>MacOS: 30m ➔ 6m</li>
+<li>WebAssembly: 15m ➔ 5m (2m if optimized further)</li>
+<li>Python: 30m ➔ 6m</li>
+<li>Windows: 30m ➔ 10m (depending on <code>vcpkg</code> being nice).</li>
+</ol>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/the_general_problem.png" alt="It has indeed saved time in the long run." />
+<p class="caption">It has indeed saved time in the long run.</p>
+</div>
+<p>Good enough to be picked up by downstream repositories as well, turns out: <a href="https://github.com/XapaJIaMnu/translateLocally/commit/a4e3e3b40e1baf955198763e99480b62495cde16">XapaJIaMnu/translateLocally@a4e3e3b</a>.</p>
+<p>While this has served to reduce the compute footprint, turnaround time for developers, the ability gained by ccache has also encouraged me to add more builds - most certainly an instance of <a href="https://en.wikipedia.org/wiki/Jevons_paradox">Jevons Paradox</a>.</p>
+<p>Cache Invalidation is a potential problem. If at some point in the future some bug corrupts a cache entry, builds can fail. The assumption is that this does not happen often, even if it does, we can just edit a flag to recache and then the builds will go back to work.</p>
+<p>Functional ccache builds for all these can be found in <a href="https://github.com/browsermt/bergamot-translator">browsermt/bergamot-translator</a>.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>Lemonade IME</title>
+    <link href="http://jerinphilip.github.io/posts/lemonade.html" />
+    <id>http://jerinphilip.github.io/posts/lemonade.html</id>
+    <published>2022-03-12T00:00:00Z</published>
+    <updated>2022-03-12T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Lemonade IME" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/lemonade.html" />
+        <title>Lemonade IME</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Lemonade IME</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Mar 12, 2022</div>
+
+         
+
+         
+            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ui.html">ui</a>, <a href="../tags/posts/linux.html">linux</a>, <a href="../tags/posts/ime.html">ime</a>, <a href="../tags/posts/cpp.html">cpp</a>, <a href="../tags/posts/bergamot.html">bergamot</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#lemonade-ime">Lemonade IME</a><ul>
+<li><a href="#verifiying-machine-generated-translations">Verifiying machine-generated translations</a></li>
+<li><a href="#screencasts">Screencasts</a></li>
+</ul></li>
+<li><a href="#what-next">What next?</a><ul>
+<li><a href="#uiux">UI/UX</a></li>
+<li><a href="#development">Development</a></li>
+</ul></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><small> This post is an account of the implementation of an Input Method Engine (IME) for translation through Intelligent Input Bus (iBus) - a software available on modern Linux desktop environments. </small></p>
+<p>Most of my work in the last years have been in the vicinity of building a library for on-device machine translation. In one exchange over GitHub, I was tasked with implementing the underlying library requirements for <em><a href="https://docs.google.com/presentation/d/15ah2n58GfbP8B97nUrfl9HdKSP3Vh71-W6vZNr37eOk/">Outbound Translation</a></em> . In essence, it refers to the concept of user enter in a source language which the user knows and a software layer intercepts it to provide the target language content.</p>
+<p>This problem immediately resonated with me. At some point during my internship at NAVER LABS Europe when I stayed in France, I had to contact La Poste customer care. Calling them up was out of the question - because my processing power for French audio over phone was worse. Somehow I managed to find this accessibility chat interface where I could “chat” with customer support, using text. What bothered me as a user was that the medium is French and I’m sitting with multiple tabs of Google Translate manually copying and translating content I receive, then translating the content I want to send out from English to French.</p>
+<p>I have been typing my mother tongue - <em>Malayalam</em>, which uses a non-Latin alphabet and has a script of it’s own using an English (US) keyboard since high school. The technology which enabled me to do this at the time was <a href="https://swanalekha.smc.org.in/">Swanalekha</a>. Learning the <a href="https://en.wikipedia.org/wiki/InScript_keyboard">InScript Keyboard</a> looked like a hard effort, and just typing out weird combinations of the alphabet to create the intended alphabet in Malayalam felt like an easier thing to learn. The technology is enabled by iBus - which one can find today in modern Linux based operating systems with <a href="https://help.gnome.org/misc/release-notes/3.6/i18n-ibus.html.en">tight integration to the GNOME Desktop</a> - and enjoys widespread use in inputting non-Latin script by means of a Latin keyboard layout (e.g: English (US)) while providing software layers for non-Latin keyboards.</p>
+<p>In a 1:1 with <a href="https://kheafield.com/">Kenneth Heafield</a>, I bring up the idea of the alternative of the entire outbound translation concept from browser-only to system-wide using the Intelligent Input Bus (iBus). While the know-hows of connecting iBus to the library was not straightforward, the possibility of the solution using both was acknowledged. However, Bergamot Project was more focused on attempting cross-platform and in the browser (on operating systems more than linux), so a pitch for a keyboard layer in the operating system (Linux specific) turned out to be a downside.</p>
+<p>My counterparties at Mozilla collosally delayed the extension’s implementation of Outbound translation, leaving me plenty idle time - some of which could be redirected towards this idea. Since the tools were decided, the solution was not all that complicated. Lemonade iwould implemented in C++ as an engine that implements the <a href="https://ibus.github.io/docs/ibus-1.5/index.html">iBus interface</a>, that connects to the <a href="https://github.com/browsermt/bergamot-translator">bergamot-translator</a> C++ library. Together with the ecosystem (models, fast-nmt engine) built by the Bergamot project, lemonade manages to run the translations completely locally, providing the privacy benefits intended to be achieved by the Bergamot Project. For purposes of building an IME, I found <a href="https://github.com/epico/ibus-libzhuyin">ibus-libzhuyin</a> which I could modify and connect to the Bergamot C++ library to reach a minimum viable product. Non traditional applications like <a href="https://mike-fabian.github.io/ibus-typing-booster/">ibus-typing-booster</a> - further improved my confidence in using iBus.</p>
+<h2 id="lemonade-ime">Lemonade IME</h2>
+<p>The user interacts with iBus through two elements - (1) a panel available system-wide and (2) an input UI in the vicinity of the text area the user intends to input the translated text.</p>
+<p><strong>Panel</strong> The panel, often available in the top-right corner for GNOME allows to choose from available input methods.</p>
+<div class="figure">
+<img src="../static/images/bergamot/lemonade-activated-dropdown.png">
+<p class="caption">
+Lemonade as an iBus engine
+</p>
+</div>
+<p>It also allows the user to switch source language, target language and allows to configure a verify option. For now, <code>xx-&gt;xx</code> is configured to be a passthrough.</p>
+<div class="figure">
+<img src="../static/images/bergamot/lemonade-source-lang-selection.png" width="45%"> <img src="../static/images/bergamot/lemonade-target-lang-selection.png" width="45%">
+<p class="caption">
+Language selection
+</p>
+</div>
+<p><strong>Input UI</strong> The input UI inverts the traditional usage. The existing implementation shows translation as pre-edit text, which is underlined text that is almost entered into the target text area. A commit action by the user inserts the pre-edit text into the text area. The candidate list is used to show the text that is entered in by the user before committing.</p>
+<div class="figure">
+<img src="../static/images/bergamot/libreoffice-without-verify.png" width="100%">
+<p class="caption">
+Using Lemonade IME in LibreOffice
+</p>
+</div>
+<p>While we only have <code>xx-&gt;en</code> and <code>en-&gt;yy</code> models internally, pivoting feature allows for entering <code>xx-&gt;yy</code> by using the models involving English in sequence.</p>
+<h3 id="verifiying-machine-generated-translations">Verifiying machine-generated translations</h3>
+<p>Okay, now that the user is potentially trusting a machine-learning system to intercept and translate the content being put in. <em>Lost in translation</em> is a thing, sometimes with dangerous consequences - <a href="https://www.theguardian.com/technology/2017/oct/24/facebook-palestine-israel-translates-good-morning-attack-them-arrest">including getting detained</a>. How does one boost the users’ confidence in the translated text?</p>
+<p><span class="citation">Zouhar et al. (<a href="#ref-zouhar2021backtranslation">2021</a>)</span> studied this as part of the Bergamot Project and came up with the UI recommendation of providing the backtranslated content additionally to the user. In this setting, we take the translated text and try to translate it back to the source language, which the user understands. If the backtranslated text match, we can be more confident that the text sent in is correct.</p>
+<div class="figure">
+<img src="../static/images/bergamot/lemonade-verify-backtranslation.png" alt="UI controls for verify" />
+<p class="caption">UI controls for verify</p>
+</div>
+<!--
+<div class="figure">
+<img src="/static/images/bergamot/libreoffice-with-verify.png" width=100%>
+<p class="caption">LibreOffice with verification</p>
+</div>
+
+<div class="figure">
+<img src="/static/images/bergamot/deutche-post-form-firefox.png"  width=100%>
+<p class="caption"></p>
+</div>
+-->
+<h3 id="screencasts">Screencasts</h3>
+<p>In the below screencast, I use lemonade (system-level) for outbound translation in conjunction with a local-translation browser extension - <a href="https://github.com/jelmervdl/firefox-translations">jelmervdl/firefox-translations</a>.</p>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/JMY4ANSAKPU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
+encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+</iframe>
+<p>Lemonade also works on other applications, pretty much any text-area by intercepting the keyboard and input method. See different controls being configured on a word-processor.</p>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Lsmpx_A_7Y8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
+encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+</iframe>
+<h2 id="what-next">What next?</h2>
+<p>I am grateful to Kenneth and the UI group in Bergamot to have received attention and feedback for what is a hobby horse side-project. Feedback I have received so-far notes that this is particularly useful in a chat setting, but limited when richer editing requirements are involved.</p>
+<h3 id="uiux">UI/UX</h3>
+<p>Since I managed a few interactions with the UI (Research) team, a lot of the problems highlighted I perceived to be quite hard.</p>
+<p><strong>UI Limitations</strong> The inability to control the UI elements (primarily because of my lack of understanding of iBus) impede complex UI mechanisms. For example, once the pre-edit text is committed, there is no way to backtrack it to the original source text that the user input. This was deemed to be useful when we want complex editing workflows that are quite common on the web. This is however a constraint due to sticking to the iBus specified interface. I am keeping keeping open a <a href="https://github.com/jerinphilip/lemonade/issues/56">web-based</a> input method to gain more development capabilities.</p>
+<p><strong>Flickering</strong> There is an increased instability in the text during translations. This is a necessary evil, as translations are not monotonic in nature and larger contexts lead to drastically different word orderings in the translated text. The modified translation is perhaps more suitable than an incremental one. This is a problem shared by interactive translation research and some speech-translation which requires stability as transcribed speech translations progress.</p>
+<p><strong>Edit workflows</strong> Queries often arose about being able to edit/verify at word levels rather than the sentence levels after an initial draft translation was committed in. Word level editing appears to be quite hard, especially when the signals we have during inference are faint.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/tasks.png" alt="xkcd: Tasks" />
+<p class="caption">xkcd: Tasks</p>
+</div>
+<h3 id="development">Development</h3>
+<p>In the current setting, the implementation uses hardcoded file paths and is reliant on the bergamot python package to fetch and inventory the models. A better position is to eventually connect to <a href="https://github.com/XapaJIaMnu/translateLocally">translateLocally</a>. translateLocally’s vision is perhaps as a cross-platform GUI application - and I’m trying to convince the authors to separate out the application library out so lemonade can pick it up. The pursuit of a <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging">Native Messaging</a> extension in translateLocally brings the features closer to the requirement of lemonade.</p>
+<p>This could also be done using the Python Interface iBus allows for, but at the time Python package for bergamot was not very mature.</p>
+<p>Lemonade source currently sits in <a href="https://github.com/jerinphilip/lemonade">jerinphilip/lemonade</a> under a permissive license. It has a lot of rough edges, which are expected to be smoothened over free time. If you’d like to help out with development, please feel free to drop by the GitHub issues/discussions or even contact me via email.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-zouhar2021backtranslation">
+<p>Vilém Zouhar, Michal Novák, Matúš Žilinec, Ondřej Bojar, Mateo Obregón, Robin L. Hill, Frédéric Blain, Marina Fomicheva, Lucia Specia, and Lisa Yankovskaya. 2021. Backtranslation feedback improves user confidence in MT, not quality. In <em>Proceedings of the 2021 conference of the north american chapter of the association for computational linguistics: Human language technologies</em>, pages 151–161, Online, June. Association for Computational Linguistics.</p>
+</div>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>Remote work: Handling connection drops and disruptions</title>
+    <link href="http://jerinphilip.github.io/posts/remote-work-handling-disruptions.html" />
+    <id>http://jerinphilip.github.io/posts/remote-work-handling-disruptions.html</id>
+    <published>2020-08-28T00:00:00Z</published>
+    <updated>2020-08-28T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Remote work: Handling connection drops and disruptions" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/remote-work-handling-disruptions.html" />
+        <title>Remote work: Handling connection drops and disruptions</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Remote work: Handling connection drops and disruptions</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Aug 28, 2020</div>
+
+         
+
+         
+            <div><a href="../tags/posts/workflow.html">workflow</a>, <a href="../tags/posts/hpc.html">hpc</a>, <a href="../tags/posts/remote-work.html">remote-work</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#try-to-find-a-decent-nix-shell.">Try to find a decent *nix shell.</a></li>
+<li><a href="#always-leave-a-session-on-the-server-tmux.">Always leave a session on the server: tmux.</a><ul>
+<li><a href="#installing-tmux-locally.">Installing tmux locally.</a></li>
+<li><a href="#configuring-tmux.">Configuring tmux.</a></li>
+<li><a href="#auto-attach-sessions">auto-attach sessions!</a></li>
+</ul></li>
+<li><a href="#the-mobile-shell">The mobile shell</a><ul>
+<li><a href="#configuring-own-install.">Configuring own install.</a></li>
+</ul></li>
+<li><a href="#local-edits-are-always-more-convenient.">Local edits are always more convenient.</a><ul>
+<li><a href="#bringing-git-into-the-workflow">Bringing git into the workflow…</a></li>
+</ul></li>
+<li><a href="#on-phone-juicessh">On Phone: JuiceSSH</a></li>
+<li><a href="#sharing-text">Sharing Text</a><ul>
+<li><a href="#pastebin-services">Pastebin services</a></li>
+</ul></li>
+<li><a href="#epilogue">Epilogue</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>My home is perhaps not located in the most urbanized of places. We had broadband a while back but very limited offerings. The only provider that existed - BSNL provided were absurdly slow and not value for money. At the time Jio came up as an alternative, I had asked BSNL office if they’d ever have any better offerings. They responded negative for the near future. The broadband-connection had been scrapped since then, and I had switched the home connection completely to 4G after some speedtest benchmarks. Something I have to look forward to is Fiber to the Home (FTTH) technology has presently made ways to where my home is and I might just get a good enough connection soon. I might have to bear with a little delay though. Thus fast forward a year or two from my earlier change of internet back home - I am back in a situation where I need a stronger connection, or manage with Jio amidst connection fluctuations etc etc.</p>
+<p>On a recent conversation with a colleague at IIIT Hyderabad who started with MobaXterm on Windows with vanilla SSH, I realized many people don’t know these methods. This would be the umpteenth time someone has brought these troubles in front of me, and I’d rather have a document which I can point to going ahead than having to describe each time. On another thread, I have realized Sukanta Sen, soon to be work-colleague and Prof. Kenneth Heafield, my new boss have also shared some troubles with working remotely connecting to servers. They have suggested mosh, which I have already been using for about 2-3 years now and will happily start using in the new environment soon.</p>
+<p>With COVID-19 lockdown situation and being stuck to working from home often experiencing interruptions with the usual providers, this is perhaps a good time time to write-up what I have been doing for a while. There are several tools which I used in the past to work around a horrible network connection. This post is specific to to maintain SSH-like sessions resilient to network drops and to avoid disruptions to the an overall programming workflow.</p>
+<h1 id="try-to-find-a-decent-nix-shell.">Try to find a decent *nix shell.</h1>
+<p>I haven’t historically liked the alternative offerings of PuTTY, MobaXterm, Cygwin etc. I would not thus recommend these, but I guess in the end it’s a matter of taste. Normally, working with servers have been easier for me in Linux. Since I got my new laptop and saw Windows Subsystem for Linux as a decent alternative, I have since shifted. I have an Ubuntu 18.04 currently running within my Windows OS. The following should be decent starting points to replicate my recommendation of an environment with a Windows machine.</p>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">Install WSL 2.0</a></li>
+<li>Here’s <a href="https://www.microsoft.com/en-us/p/ubuntu-1804-lts/9n9tngvndl3q">Ubuntu 18.04 LTS</a>. Another variant if you need can be installed from even the Windows Store.</li>
+</ul>
+<p>On this *nix setup and one such on the remote, the content ahead describes how to get the following tooling working:</p>
+<ul>
+<li>tmux: installing, auto-attaching/save-resume sessions</li>
+<li>mosh: building connection drop resilience and better response in UX.</li>
+<li>JuiceSSH: take occassional checks when you are travelling.</li>
+</ul>
+<h1 id="always-leave-a-session-on-the-server-tmux.">Always leave a session on the server: tmux.</h1>
+<p>I always prefer to leave tmux sessions running on a server that is guaranteed to have network connectivity. At IIIT-Hyderabad, my former university and NAVER LABS Europe where I recently finished my internship, this had been the gateway nodes which allow for such operation. In IIIT - this was atom or ada, the headnodes to the HPC clusters I worked with.</p>
+<p>If you have tmux (one of the recent versions) installed already on this server, life-becomes really easy. Often server-admins prefer ancient CentOS and tmux versions, which I do not find to my taste. For the uninitiated, it’s actually really easy to install a more recent version of tmux by yourself without root-permissions. The only dependency tmux has is perhaps libevent.</p>
+<h2 id="installing-tmux-locally.">Installing tmux locally.</h2>
+<p>The following is subject to change, as the source of the following packages change. At the time this post is being written:</p>
+<p>You can find a recent version of tmux at:</p>
+<ul>
+<li><a href="https://github.com/tmux/tmux/releases" class="uri">https://github.com/tmux/tmux/releases</a></li>
+</ul>
+<p>How you install any package locally is usually very simple, once you know the linux install routine.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">./configure</span> --prefix=<span class="va">$HOME</span>/.local/
+<span class="fu">make</span> <span class="kw">&amp;&amp;</span> <span class="fu">make</span> install</code></pre></div>
+<p>I have not checked this, but usually, the routine throws up a complaint when you try to do the above alone about a libevent dependency. Normally this is taken care of a package manager, but if you’re not root you’d have some additional trouble. Thankfully, tmux has in the past installed for me with just one additional dependency - which is libevent. Releases can be found somewhere below.</p>
+<ul>
+<li><a href="https://github.com/libevent/libevent/releases" class="uri">https://github.com/libevent/libevent/releases</a></li>
+<li><a href="https://libevent.org/" class="uri">https://libevent.org/</a></li>
+</ul>
+<h2 id="configuring-tmux.">Configuring tmux.</h2>
+<p>There are a lot of ninja-techniques to configure as well. I often try to stick with the bare minimum and defaults (not changing modifiers etc), so I can get started on the next server with minimum configuration change requirements.</p>
+<p>You can find several good enough tutorials to configure tmux online.</p>
+<h2 id="auto-attach-sessions">auto-attach sessions!</h2>
+<p>I change machines between my laptop, desktop and phone while connecting to the servers described above. A desirable feature is consistency among all three, and saved sessions with auto-attach at the point of connection. I normally use only one tmux session and multiplex using panes or splits.</p>
+<p>I have the following script which auto-attaches a tmux if it is already running, otherwise creates one for me. Add the snippet in your <code>~/.bashrc</code> or <code>~/.bash_profile</code> on the server.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># HOSTNAME checks and launches tmux only on the ada head-node.</span>
+<span class="co"># Checks if already within a tmux as well.</span>
+<span class="kw">if</span><span class="bu"> [</span> <span class="va">$HOSTNAME</span> <span class="ot">=</span> <span class="st">&quot;ada.iiit.ac.in&quot;</span><span class="bu"> ]</span> <span class="kw">&amp;&amp;</span><span class="bu"> [</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$TMUX</span><span class="st">&quot;</span><span class="bu"> ]</span> ; <span class="kw">then</span>
+    <span class="co"># attach if running    || launch new</span>
+    <span class="ex">tmux</span> attach -dt <span class="st">&quot;main&quot;</span> <span class="kw">||</span> <span class="ex">tmux</span> new -s <span class="st">&quot;main&quot;</span>
+<span class="kw">fi</span></code></pre></div>
+<p>The above snippet is specific to <code>ada.iiit.ac.in</code>, but you can come up with something similar based on your setup.</p>
+<p>If you’re not using bash, which is default on most systems, you should be knowledgeble enough to find the runtime-configuration file where this goes. The <code>if</code> guard is so that when <code>~/.bashrc</code> is run again on a compute node, it doesn’t create tmux-ception.</p>
+<h1 id="the-mobile-shell">The mobile shell</h1>
+<p>Now comes the next major problem. <em>SSH</em>. The problem with SSH is that if it disconnects it won’t reconnect back automatically. It simply hangs. Also, when you SSH, the shell waits for response to come back to echo the result of what you entered. The slowness here is extremely disruptive while developing or running something on the server. To overcome some of this and build resilience to connection disruptions we will discard SSH in favour of <a href="https://mosh.org/">Mosh</a> or the Mobile Shell.</p>
+<p>The thing is, you need mosh installed at the server. On atom/cosmos, I had been root - so I can install mosh on every node I want with one command and ansible. On ada, I have enough pull to get the HPC admin to install it for me. At NAVER, this was not the case - and I installed a local version of mosh myself and configured it. A rough procedure to accomplish something similar is described below.</p>
+<h2 id="configuring-own-install.">Configuring own install.</h2>
+<p>I am not going to go in detail, but the same <code>configure</code>, <code>make</code> and <code>make-install</code> routine can get mosh in your local folder. But by default, mosh doesn’t look for a local mosh installation or doesn’t assume the path where it is installed. In this case</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># fill remote home below.</span>
+<span class="co"># In case of ada - this would be /home/$USER/.local</span>
+<span class="va">HOME=</span>... 
+
+<span class="co"># Launch mosh specifying location of where the mosh-server is installed.</span>
+<span class="ex">mosh</span> --server=<span class="va">$HOME</span>/.local/bin/mosh-server <span class="op">&lt;</span>user<span class="op">&gt;</span>@<span class="op">&lt;</span>server-host<span class="op">&gt;</span></code></pre></div>
+<h1 id="local-edits-are-always-more-convenient.">Local edits are always more convenient.</h1>
+<p>You might think with all the above in space, you are really good to go. While mosh gives you local-echo and connection drop resilience, it still disconnects and disrupts your workflow. Have a look at <a href="https://heeris.id.au/trinkets/ProgrammerInterrupted.png">this comic</a>, which is relatable in the context.</p>
+<p><a class="btn btn-secondary" data-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample"> Why you shouldn’t interrupt a programmer. </a></p>
+<div id="collapseExample" class="collapse">
+<div class="card card-body">
+<p><img src="https://heeris.id.au/trinkets/ProgrammerInterrupted.png" alt="Why you shouldn't interrupt a programmer?"></p>
+</div>
+</div>
+<p>
+</p>
+<p>The network part is still a blocking-bottleneck and a point of failure. I believe it’s fairly obvious that it is best to make edits and run locally. However, my personal machine which I optimized for portability barely has the power to run the demanding jobs I run. Editing the text source files which are run-eventually, any tiny machine can - even your android phone!</p>
+<p>How I manage the changes consistently across different servers, and my personal machine which I use for edits is git. Any version control system with a central remote you can pull to make everything consistent works.</p>
+<h2 id="bringing-git-into-the-workflow">Bringing git into the workflow…</h2>
+<p>To enhance the workflow one more level further, I would recommend editing code through a git enabled repository which can sync at the server through a simple <code>git-pull</code>. This ensures your edits are visible as you make them and only running the command is what is dependent on the server.</p>
+<ol style="list-style-type: decimal">
+<li>Create an edit branch and sneak <code>git-pull</code>s into a build/run file at the server.</li>
+<li>The point where you get a working version of the source, merge the branch as one commit to the main code to avoid polluting commit history.</li>
+</ol>
+<h1 id="on-phone-juicessh">On Phone: JuiceSSH</h1>
+<p>One might not always have a laptop with Windows 10 and WSL, or Ubuntu running while travelling. This was the case at times when I was volunteering as CVIT sys-admin, and while I had been travelling in France. Sadly, there is no mosh for mobile, but I have find JuiceSSH to be decent enough for quick tasks. If you enable the auto-attaching tmux sessions, JuiceSSH can be used with minimum disruptions to occassionally check on your jobs and maybe edit if necessary to tiny degrees.JuiceSSH is available for install on the Google Play Store.</p>
+<ul>
+<li><a href="https://play.google.com/store/apps/details?id=com.sonelli.juicessh&amp;hl=en_IN">Google Play Store: JuiceSSH</a></li>
+</ul>
+<p>There are other alternatives as well, but JuiceSSH is what I like. Soon, I think I might even end up paying for the premium features the developer provides.</p>
+<h1 id="sharing-text">Sharing Text</h1>
+<p>Often, I end up in a situation where I have to share text generated in these servers to another place (maybe my local machine, maybe to share results with a colleague). The issue with the above setup is that often, these outputs can’t be copy-pasted using mouse (as the terminal-mosh-tmux-server intermediates will lose the clipboard).</p>
+<h2 id="pastebin-services">Pastebin services</h2>
+<p>What I rely on is a command-line paste-service. I used to use <a href="http://ptpb.pw">ptpb.pw</a>. However, this service has gone down since then due to abuse. Of late, I have stuck to <a href="http://ix.io">ix.io</a>. It even offers a user through <code>.netrc</code> based login, which is not very safe but I have been a happy user of. I have found this service satisfactory enough for now. You can substitute for the same with any paste-provider with a command line service. I will point to the possibilities opened by such a service and leave for you to google for the rest.</p>
+<h1 id="epilogue">Epilogue</h1>
+<p>This post was drafted on a TGV with the onboard WiFi, as I’m not sure how otherwise to kill time on a 4.5 hour trip to Paris from Toulouse. I have wrapped up my 6-month internship at NAVER LABS Europe, stayed a month with Phani while attempting a UK Visa, which has unfortunately failed. From Paris, I’m hoping I can take the Vande Bharat (CDG - DEL - COK), to arrive home in about 48 hours of travel.</p>
+<p>Forgive any typos or errors, and please be kind-enough to point them out so I can correct if they exist. If you know better methods to stay connected and edit code, run them on servers, please do let me know in comments below.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>Unsupervised Sentence Tokenization for Indian Languages</title>
+    <link href="http://jerinphilip.github.io/posts/sentence-splitters-for-ilmt.html" />
+    <id>http://jerinphilip.github.io/posts/sentence-splitters-for-ilmt.html</id>
+    <published>2020-08-20T00:00:00Z</published>
+    <updated>2020-08-20T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Unsupervised Sentence Tokenization for Indian Languages" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/sentence-splitters-for-ilmt.html" />
+        <title>Unsupervised Sentence Tokenization for Indian Languages</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Unsupervised Sentence Tokenization for Indian Languages</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Aug 20, 2020</div>
+
+         
+
+         
+            <div><a href="../tags/posts/nlp.html">nlp</a>, <a href="../tags/posts/indian-languages.html">indian-languages</a>, <a href="../tags/posts/mt.html">mt</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#premise">Premise</a></li>
+<li><a href="#rules-vs-learning-from-context">Rules vs Learning from Context</a></li>
+<li><a href="#enter-the-punkttokenizer">Enter the PunktTokenizer</a></li>
+<li><a href="#hacking-punkttokenizer">Hacking PunktTokenizer</a><ul>
+<li><a href="#getting-training-to-work">Getting training to work</a></li>
+<li><a href="#injecting-custom-delimiters">Injecting custom delimiters</a><ul>
+<li><a href="#process">Process</a></li>
+<li><a href="#final-solutionworkaround">Final Solution/Workaround</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#merging-into-ilmulti">Merging into ilmulti</a></li>
+<li><a href="#afterthoughts">Afterthoughts</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>I had originally built the tooling around my static site generator to actually write a log of <a href="http://preon.iiit.ac.in/~jerin/">my work in CVIT</a>. Much of the content I wrote used to go there, but since I’m out now and free, I have new resolution to convert pieces that won’t make to papers here.</p>
+<p>A lot of my work used to involve playing catch-up with what has already been well-implemented and working for western languages adapting them to Indian Languages. Much of these are worth penning-down, but won’t be strong enough to make to any academic publishing venues. Neither do I have the bandwidth to take it to a full-open-source well-received library now. I will hope pieces like these help out someone foraying into the area in the future.</p>
+<h2 id="premise">Premise</h2>
+<p>The <a href="http://pib.gov.in">Press Information Bureau</a> (PIB) articles are currently a source of training data for us to try out ideas in NMT models. A very low level yet largely critical issue which I have in my Indian Languages Machine Translation pipeline is <strong>sentence-splitting</strong>.</p>
+<p>This is a point of increased irritation for me while inspecting the outputs and alignments in a web-interface I hacked up together for PIB debugging. I have realized the gravity of this problem only recently, after using crude-rule based setups to do sentence-tokenization brought about artifacts. Some of the errors in this pipeline seems to have been mitigated by some dark-magic in BLEUAlign <span class="citation">(Sennrich and Volk, <a href="#ref-sennrich2011iterative">2011</a>)</span> which works in our favour compensating any serious damage.</p>
+<p>If given an option, I would just write or show code - no documentation, no non-technical aspects. I’ll try a bit harder to resist my usual antics this time. Let’s have a closer look at what the problem with my old pattern/rule based sentence-tokenization is.</p>
+<h2 id="rules-vs-learning-from-context">Rules vs Learning from Context</h2>
+<p>The problem is that punctuation is not enough - we need surrounding context! We will keep the example an English one for a wider-audience.</p>
+<blockquote>
+<p>GST Revenue Collection Figures stand at Rs.92,150 crore as on 23rd October, 2017; The total number of GSTR 3B returns filed for the month of September 2017 is 42.91 lakhs (as on 23.10.2017).</p>
+</blockquote>
+<p>Going by the usual sentence-delimiter ‘.’ alone in the above setting leads to ‘23.10.2017’ being treated as 3 different sentences with my currently implemented rule-based segmenter alone. The ambiguity here needs to be often resolved statistically using surrounding context. Same goes for ‘Rs.’. Now my problem is that 23 here would map to 23 in the Hindi sentence as well, which will seep through my checks in the pipeline. I have a gut-feeling that I am bound to get better translations and improved retrieval scores which I use to rank matching articles as well here.</p>
+<p>One might think - languages like Hindi, Bengali etc. have a different delimiter. This should make the job easier in these languages. However, there are several documents on the web which use the period (full-stop) instead of the usual end-of-sentence-marker (<code>\u0965</code>), or the Devanagari <em>danda</em>. Go have a look at <a href="https://khabar.ndtv.com/">NDTV Khabar</a>, for example. It seems that humans have also managed to confuse readers by using the vertical-pipe instead (<code>|</code>).</p>
+<p>As I start, I am already aware of some <a href="https://github.com/moses-smt/mosesdecoder/commit/103707002699a1e114a2f45c1ef1c2b20a981964">additions</a> by <a href="http://homepages.inf.ed.ac.uk/bhaddow">Barry Haddow</a>, which he possibly created while preparing the PMIndia Corpus. However the additions are in the moses and possibly the perl ecosystem, which I will shy-away because my ecosystem is built in python.</p>
+<h2 id="enter-the-punkttokenizer">Enter the PunktTokenizer</h2>
+<p>Punkt <span class="citation">(Kiss and Strunk, <a href="#ref-kiss2006unsupervised">2006</a>)</span> has existed for a while now, and it’s perhaps my lack of background in NLP why I wasn’t aware about the same. I am also curious as to why nobody tried to implement it for Indian Languages. I found an <a href="https://github.com/nltk/nltk_data/pull/144">attempt</a> which tried to create one for Malayalam, which didn’t get merged yet.</p>
+<p>There is already an existing implementation in <a href="https://github.com/nltk/nltk/blob/develop/nltk/tokenize/punkt.py">NLTK</a> <span class="citation">(Bird et al., <a href="#ref-bird2009natural">2009</a>)</span>. So as I take on another project in the area, I thought, why not ensure that there are Punkt Tokenizers available publically for the community to use for Indian Languages. So I set-out to the self-assigned task in hand.</p>
+<h2 id="hacking-punkttokenizer">Hacking PunktTokenizer</h2>
+<p>As I begin, I am notoriously underestimating the time-required for this task. This is supposed to be a tiny part of what I am about to do. My hope is that I just need to get training code connected and it will out-of-the box work.</p>
+<h3 id="getting-training-to-work">Getting training to work</h3>
+<p><img src="https://imgs.xkcd.com/comics/dependency_2x.png" width="50%"></p>
+<p><strong>Should be easy given a great idea and some existing NLTK implementation, correct?</strong></p>
+<p>For a surprisingly robust idea and what should be widely adopted(?) idea, the tutorials on how to train and similar are not as abundantly available as I thought it would be. StackOverflow gave a couple of useful links (<a href="https://stackoverflow.com/questions/52150000/how-to-train-nltk-punktsentencetokenizer-batchwise">#1</a>, <a href="https://stackoverflow.com/questions/21160310/training-data-format-for-nltk-punkt">#2</a>). After one more level of digging, what I finally found worked to be repurposed for my use-case was at <a href="https://github.com/alvations/DLTK/blob/master/dltk/tokenize/tokenizer.py">alvations/dltk</a>. There’s a decent example in there, which I started repurposing for my needs.</p>
+<p>Okay, I have managed to figure out the training routine. However, this doesn’t seem to be working for sentence-delimiters which are different, like Hindi’s <em>PurnaVirama</em> and Bengali’s whatever the delimiter is. Good thing is <a href="https://bnjasim.github.io/">Binu</a> has found a potential list of these and stored them into some <a href="https://github.com/jerinphilip/ilmulti/blob/ccdaf9f5ffdf06c921276092f19a62883fcaf8e0/ilmulti/segment/segmenters.py#L37">pattern-segmenter</a> in <a href="https://github.com/jerinphilip/ilmulti">ilmulti</a>. Some useful information exists in <a href="http://anoopk.in/">Anoop</a>’s <a href="https://github.com/anoopkunchukuttan/indic_nlp_library/blob/master/indicnlp/tokenize/sentence_tokenize.py">IndicNLPLibrary code</a> as well, where he does some accounting for numbers and abbreviations. But I have a policy of not doing anything for a single-language and hence me rooting for trained Punkt models.</p>
+<h3 id="injecting-custom-delimiters">Injecting custom delimiters</h3>
+<p>There’s an <a href="https://github.com/nltk/nltk/issues/2008">entire thread</a> by alvations again on some attempt - oh, I can start to empathize with the plight now. My thinking goes like this now, <a href="https://www.nltk.org/_modules/nltk/tokenize/punkt.html#PunktLanguageVars"><code>PunktLanguageVars</code></a> have to be customized per language inorder to be able to accomodate the custom delimiters in languages like Bengali, Hindi, Marathi, Urdu etc. Somewhere in the source I found this has to be overridden.</p>
+<h4 id="process">Process</h4>
+<p>The following are my reactions as I progress about getting this accomplished.</p>
+<ol style="list-style-type: decimal">
+<li>Ugghh, I actually need more knowledge of Punkt the paper and the implementation now.<br />
+</li>
+<li>Turns out not, I just modified the sentence-delimiters with some twisted python dynamic inheritance <a href="https://github.com/jerinphilip/ilmulti/blob/c589adfb1a23834041ac65deec35fe182ff2a92a/ilmulti/segment/punkt_segmenter/utils.py#L7-L30">workarounds</a> (might have been an overkill, if I look back). Marathi seems to be using full-stops.</li>
+<li>Training might have improved with the additional stuff, I hope. But what about test? Found something on StackOverflow. <a href="https://stackoverflow.com/questions/29746635/nltk-sentence-tokenizer-custom-sentence-starters">nltk:custom-sentence-starters</a> The above doesn’t seem to be working, weird.<br />
+</li>
+<li>Seems like this is more effort than what it’s worth, thinking of lesser solutions that I can get away with. Decimal, Abbreviation ambiguity to be cleared in a first round, then use hard-delimiters for each language, like the Devanagiri <em>danda</em> in a second pass.</li>
+<li>Finally managed a working solution after tinkering with the code for a while. I modified the first-pass-annotation function from punkt pulling the punkt implementation’s <a href="https://github.com/nltk/nltk/blob/b0cd83ded0c3c2394f878d8577d71187fa3f9ae4/nltk/tokenize/punkt.py">source</a>. second pass.</li>
+</ol>
+<h4 id="final-solutionworkaround">Final Solution/Workaround</h4>
+<div class="sourceCode"><pre class="sourceCode diff"><code class="sourceCode diff"><span class="kw">diff --git a/sentence_tokenizers/punkt.py b/sentence_tokenizers/punkt.py</span>
+index 408ce27..e30de2a 100644
+<span class="dt">--- a/sentence_tokenizers/punkt.py</span>
++++ b/sentence_tokenizers/punkt.py
+@@ -615,6 +615,10 @@ class PunktBaseClass(object):
+                 aug_tok.abbr = True
+             else:
+                 aug_tok.sentbreak = True
++        else:
++            for sent_end_char in self._lang_vars.sent_end_chars:
++                if tok[-1] == sent_end_char:
++                    aug_tok.sentbreak = True
+ 
+         return
+ </code></pre></div>
+<p>On a quick look, I can already tell that <code>tok[-1]</code> is a potential <code>IndexError</code> in the future at some point, maybe as I am not placing any guards. But this is not production code, we will handle it when an issue comes.</p>
+<p>In the above ordering, you can observe me coasting through the points in below graph:</p>
+<p><img src="https://i.redd.it/d0dxcnw57kb01.jpg" width="50%"></p>
+<p>I would ideally wish to open a PR, communicate with the developers and merge the required things upstream in nltk, but for now I will find myself content with a working solution and move onward to immediately pressing things in hand.</p>
+<p><strong>Edit 25 August 2020</strong>: The <a href="https://github.com/nltk/nltk/issues/2586">issue I opened</a> was addressed by one of the NLTK-devs who opened a <a href="https://github.com/nltk/nltk/pull/2587">PR</a>. I prefer the solution in the PR and have temporarily adopted it. I hope the changes eventually make upstream.</p>
+<h2 id="merging-into-ilmulti">Merging into ilmulti</h2>
+<p>Looks like I have some solution ready for sentence tokenization for Indian Languages. I was prototyping at <a href="https://github.com/jerinphilip/sentence-tokenizers">jerinphilip/sentence-tokenizers</a> I have the <a href="https://github.com/jerinphilip/ilmulti">ilmulti</a> repo prepared with some API which currently exists inside my head. Fitting the sentence-tokenizers I just built to the same provides ease of usage in my PIB pipeline.</p>
+<p>This is what we will do next, and build the documentation along with the blog post in the process.</p>
+<p>The API is rather simple:</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python">
+<span class="kw">class</span> BaseSegmenter:
+
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs):
+        <span class="co"># Initialize with any required trained models, paths,</span>
+        <span class="co"># language configurations.</span>
+
+    <span class="kw">def</span> <span class="fu">__call__</span>(<span class="va">self</span>, content, lang<span class="op">=</span><span class="va">None</span>):
+        <span class="co"># Find language if unspecified.</span>
+        <span class="co"># Call the language specific sentence-tokenizer</span></code></pre></div>
+<p>I usually have some lazy-load hack involved as well, and instances for a particular language are created only during the first call for the same and reused after.</p>
+<p>I want to add some tests as well, at least the qualititative kind so people can quickly get started with the individual components. This time, I have managed to squeeze the tests, for a quick qualitative checks in two scripts (<a href="https://github.com/jerinphilip/ilmulti/blob/master/ilmulti/segment/punkt_segmenter/test.py">#1</a>, <a href="https://github.com/jerinphilip/ilmulti/blob/master/scripts/test_punkt.sh">#2</a>).</p>
+<p>The final step is to check integration in the PIB crawl-environment that the sentence-tokenizers (which I call segmenters) are working as intended. At this stage, I can export a document NMT standard corpus with segment annotations from my raw-text so researchers can work in the area while applying principles or ideas to Indian Languages as well.</p>
+<p><strong>Let the survivor bias kick in</strong>. This was cakewalk - took a few fixes to the code I wrote initially, but didn’t take much time getting there. Numbers decimal’s etc seem to be working nicely, I will still need to account for more abbreviations etc., which can eventually be improved as the data-situation improves, I hope..</p>
+<h2 id="afterthoughts">Afterthoughts</h2>
+<ol style="list-style-type: decimal">
+<li>The current trained models of Punkt are not perhaps the best. But I believe I can eventually tap into the monolingual data in the likes of <a href="https://github.com/AI4Bharat/indicnlp_corpus">AI4Bharat</a> <span class="citation">(Kunchukuttan et al., <a href="#ref-kunchukuttan2020ai4bharat">2020</a>)</span>.</li>
+<li>For a task among several other things done under 2 days, while not perfect, this is good enough a starting point. Maybe someone who follow-up the work in IIIT can take cleaning this up incrementally.</li>
+<li>Once again, working my way around several stuff I have no clue how it runs under the hood - I have successfully managed to produce something of value. I intend to read up more on the likes of BleuAlign and Punkt later, but no time in hand now.</li>
+<li>Using this in our pipeline mentioned in <span class="citation">Siripragada et al. (<a href="#ref-siripragada-etal-2020-multilingual">2020</a>)</span> and <span class="citation">Philip et al. (<a href="#ref-philip2020revisiting">2020</a>)</span> actually led to lesser sentences with more-articles (but I expect a consequent increment in mean-sentence-length or an eventual bugfix; Edit: eventual-bugfix is what happened.). Who knows, if the improved quality of the corpora might lead to better BLEU scores?</li>
+<li>These should easily cover 11 languages which ilmulti operates on, but I won’t make many strong claims here.</li>
+</ol>
+<h1 id="references" class="unnumbered">References</h1>
+<div id="refs" class="references">
+<div id="ref-bird2009natural">
+<p>Steven Bird, Ewan Klein, and Edward Loper. 2009. <em>Natural language processing with python: Analyzing text with the natural language toolkit</em>. “ O’Reilly Media, Inc.”, editions.</p>
+</div>
+<div id="ref-kiss2006unsupervised">
+<p>Tibor Kiss and Jan Strunk. 2006. Unsupervised multilingual sentence boundary detection. <em>Computational linguistics</em>, 32(4):485–525.</p>
+</div>
+<div id="ref-kunchukuttan2020ai4bharat">
+<p>Anoop Kunchukuttan, Divyanshu Kakwani, Satish Golla, Avik Bhattacharyya, Mitesh M Khapra, Pratyush Kumar, and others. 2020. AI4Bharat-indicnlp corpus: Monolingual corpora and word embeddings for indic languages. <em>arXiv preprint arXiv:2005.00085</em>.</p>
+</div>
+<div id="ref-philip2020revisiting">
+<p>Jerin Philip, Shashank Siripragada, Vinay P Namboodiri, and CV Jawahar. 2020. Revisiting low resource status of indian languages in machine translation. <em>arXiv preprint arXiv:2008.04860</em>.</p>
+</div>
+<div id="ref-sennrich2011iterative">
+<p>Rico Sennrich and Martin Volk. 2011. Iterative, mt-based sentence alignment of parallel texts. In <em>Proceedings of the 18th nordic conference of computational linguistics (nodalida 2011)</em>, pages 175–182.</p>
+</div>
+<div id="ref-siripragada-etal-2020-multilingual">
+<p>Shashank Siripragada, Jerin Philip, Vinay P. Namboodiri, and C V Jawahar. 2020. A multilingual parallel corpora collection effort for Indian languages. In <em>Proceedings of the 12th language resources and evaluation conference</em>, pages 3743–3751, Marseille, France, May. European Language Resources Association.</p>
+</div>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>TeX environment thoughts</title>
+    <link href="http://jerinphilip.github.io/posts/latex-build-system.html" />
+    <id>http://jerinphilip.github.io/posts/latex-build-system.html</id>
+    <published>2020-05-10T00:00:00Z</published>
+    <updated>2020-05-10T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="TeX environment thoughts" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/latex-build-system.html" />
+        <title>TeX environment thoughts</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>TeX environment thoughts</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>May 10, 2020</div>
+
+         
+
+         
+            <div></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12"><h2 id="overleaf-vs-local-environment">Overleaf vs Local environment</h2>
+<p>Overleaf has been very convenient to collaborate with other people while writing/reviewing scientific papers. I write scientific papers in Latex, which means the source can be treated like code, and versioning be enabled. I like git and the <a href="https://xkcd.com/1597/">superpowers</a> that come with it. In an ideal setting, I’d have the full git repository with branches and versioning with my collaborators. But it’s almost unlikely that I find such people and unnecessary overhead is added to the process. Luckily OverLeaf offers a neat bridge with git enabled versioning, which solves a lot of my problems.</p>
+<p>So my typical paper-writing workflow is:</p>
+<ol style="list-style-type: decimal">
+<li>Start a project on OverLeaf,</li>
+<li>do a git-pull to the local machine</li>
+<li>Create a remote and push on a GitHub repository, because I like keeping reviews and comments as issues over there and track changes in source in the web UI.</li>
+<li>Add a Makefile so local builds are easy and possible.</li>
+<li>Use vim and evince to create an overleaf-y environment to edit locally.</li>
+</ol>
+<p>Keeping a few copies also lets you continue work in the unlikely event of an overleaf outage, or internet outage - which can happen.</p>
+<h2 id="the-pros-and-cons">The Pros and Cons</h2>
+<p>OverLeaf doesn’t allow full history access unless you are a premium user. Premium however is rather expensive, when I’m already skilled to use the versioning tools for software to track history. Not much of a plus, but I commit my changes, so I usually know which changes came from who.</p>
+<p>Sometimes people tend to mess-up documents and be clueless what went wrong (like an unbalanced paranthesis somewhere etc), then spend a fair amount of timing fixing this. It’s usually very easy to check the diffs instead, and overleaf’s UI and history access isn’t particularly the most useful when it comes to all these. It also helps me to quickly know what changes my advisors have made, so I don’t retouch them to go around in circles.</p>
+<p>I have been asked by a few why I don’t use something GUI like TexMaker. Perhaps I’m just too attached to vim. There are certain use-cases in vim, especially while working with latex-source or navigating the text fast which simply is very straightforward in vim. Here are a bunch of those:</p>
+<ol style="list-style-type: decimal">
+<li><a href="https://vim.fandom.com/wiki/Jumping_to_previously_visited_locations">jump-lists</a></li>
+<li><a href="https://github.com/godlygeek/tabular">Tabular.vim</a></li>
+<li>Indentation of math, etc which is possible in vim.</li>
+<li>I can <code>\include{...}</code> files and use <code>C-w-g-f</code> (Control-window-go-to-file) to open the file quickly in a new tab.</li>
+</ol>
+<p>Moving around files is especially useful, when the nature of your document is more book-like (a thesis, which I’m trying to wrap up soon) and the flat structure of the usual paper-template is not perhaps what you begin and proceed with.</p>
+<p>Not having <a href="https://www.tug.org/TUGboat/tb29-3/tb93laurens.pdf">SyncTex</a> is kind of a bummer, but not really a problem to me, as it has failed several times for me and is not something that I would like to get used to.</p>
+<h2 id="windows-adaptation">Windows adaptation</h2>
+<p>The above setting is very straightforward while in a Linux ecosystem. Previously I was a heavy user of Linux distributions (Ubuntu, ArchLinux), which made all the trickery convenient. But this year I decided to make my life simpler about the time I got a new laptop, a ThinkPad X1 Carbon (Generation 7). It came pre-loaded with Windows 10 and I had heard good reviews from Aditya about the Windows Subsystem for Linux (WSL). WSL2 gave me decent start on Windows (I’d totally recommend it, I’ve been trying advanced things with it and it works decent enough).</p>
+<p>I don’t need to say much here, because once you have WSL2 it’s almost the same as how you would do this on Linux.</p>
+<p>Adobe Reader opened the PDF to edit (not read-only), which made rebuilding the PDF throw errors. I solved the first issue by installing evince from <a href="https://www.fosshub.com/Evince.html">here</a>. Opens read-only and is good enough to work with. (Also, windows apps can be neatly launched from bash-shell inside WSL. I simply added a symlink to the <code>.exe</code> which lauches evince.</p>
+<h2 id="latexmk">LatexMk</h2>
+<p>I discovered Latexmk (I know, bit late) and had to rework the usual <code>Makefile</code> to enable the same. Below is the Makefile using latexmk that I use.</p>
+<script src="https://gist.github.com/jerinphilip/c9360753ba498546df707b23fdfe3207.js"></script>
+<p>I lifted somewhere from the internet, the author I can’t seem to track now. There is a modification to build to a directory, with <code>JOBNAME</code>.</p>
+<p>To use evince as the default pdf viewing tool, you might possibly want to edit your <code>~/.latexmkrc</code> with the following line:</p>
+<div class="sourceCode"><pre class="sourceCode php"><code class="sourceCode php"><span class="kw">$pdf_previewer</span> = <span class="st">'evince'</span><span class="ot">;</span></code></pre></div>
+<h2 id="what-to-tinker-with-next">What to tinker with next?</h2>
+<p><strong>WSL</strong>, particularly WSL2 is very exciting for me. I have been trying to play around with <a href="https://pidgin.im/">pidgin</a> source code in my free time, hoping I can do some plugin hacking in the future. Building and modifying seems very convenient with the WSL system (unlike my past experiences with Git Bash / Cygwin / etc).</p>
+<p><strong>LaTeX builds</strong> I have been using XeLaTeX recently because I’ve had to work with Indian language scripts and the fonts, which are not natively supported by pdflatex. While trying to solve a certain problem, I have found hints that LuaLatex is perhaps a better choice in terms of build speed etc for diagrams. Maybe, when the need becomes critical or there is some free time.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>Multilingual Sentence Representations</title>
+    <link href="http://jerinphilip.github.io/posts/multilingual-sentence-representations.html" />
+    <id>http://jerinphilip.github.io/posts/multilingual-sentence-representations.html</id>
+    <published>2019-06-04T00:00:00Z</published>
+    <updated>2019-06-04T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Multilingual Sentence Representations" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/multilingual-sentence-representations.html" />
+        <title>Multilingual Sentence Representations</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Multilingual Sentence Representations</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jun 04, 2019</div>
+
+         
+
+         
+            <div></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#methodology">Methodology</a><ul>
+<li><a href="#datasets-and-training">Datasets and Training</a></li>
+<li><a href="#encoded-representations">Encoded Representations</a><ul>
+<li><a href="#nearest-neighbours">Nearest Neighbours</a></li>
+<li><a href="#embedding-and-visualizing-in-lower-dimensions">Embedding and visualizing in lower-dimensions</a><ul>
+<li><a href="#target-space">Target Space</a></li>
+<li><a href="#source-language-space">Source language space</a></li>
+<li><a href="#colored-by-source-and-target">Colored by source and target</a></li>
+<li><a href="#same-concepts---different-language.">Same concepts - different language.</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+<li><a href="#literature-survey">Literature Survey</a><ul>
+<li><a href="#multilingual-translation">Multilingual Translation</a></li>
+<li><a href="#feature-extraction">Feature Extraction</a></li>
+<li><a href="#mining-parallel-pairs">Mining Parallel Pairs</a></li>
+<li><a href="#evaluations">Evaluations</a></li>
+</ul></li>
+<li><a href="#conclusion-and-future-work">Conclusion and Future Work</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><small> This post is an experiment killed rather early while I was looking into interpretability of learned transformer representations during my Masters. The post is added to my personal blog on 2020 August 06, but the date of the original post in my blog preserved. It’s written in the fashion of somthing like a paper. A better work I found after dropping my pursuits surrounding the problem is <a href="https://research.google/pubs/pub48541/">Investigating Multilingual NMT Representations at Scale</a>, by a group in Google. </small></p>
+<h2 id="introduction">Introduction</h2>
+<p>In this work, we investigate</p>
+<ul>
+<li>Sentence representations from a multilingual neural machine translation model.</li>
+<li>We explore the possibilities of re-use and transfer of these learnt embeddings.</li>
+</ul>
+<h2 id="methodology">Methodology</h2>
+<h5 id="datasets-and-training">Datasets and Training</h5>
+<p>We train a multilingual model with joint encoder, decoder and shared embeddings between both as per <span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span> on a large compiled corpus consisting of IIT-Bombay Hindi English Parallel Corpus (IITB-hi-en) [<span class="citation">Kunchukuttan et al. (<a href="#ref-kunchukuttan2018iit">2018</a>)</span>], Indian Languages Corpora Initiative (ILCI) [<span class="citation">Jha (<a href="#ref-jha2010tdil">2010</a>)</span>], WAT-Indic Multi Parallel Corpus (WAT-ILMPC) [<span class="citation">Nakazawa et al. (<a href="#ref-nakazawa2018overview">2018</a>)</span>]. The test sets of both IITB-hi-en and WAT-ILMPC are left out of training and the evaluation scores on these are reported below. We use a compilation of validation sets from the two datasets for monitoring validation loss.</p>
+<table>
+<thead>
+<tr class="header">
+<th>srcs</th>
+<th>hi</th>
+<th>en</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>en</td>
+<td>20.46</td>
+<td>100.00</td>
+</tr>
+<tr class="even">
+<td>hi</td>
+<td>100.00</td>
+<td>22.91</td>
+</tr>
+</tbody>
+</table>
+<p>For evaluating multilingual embeddings we use the <em>Mann Ki Baat</em> dataset as an unseen dataset, and ILCI corpus from the training dataset. The details of this dataset are described in the table below. We use 3348 samples aligned across each language form <em>Mann Ki Baat</em> and 50K from ILCI corpus. The BLEU scores on <em>Mann Ki Baat</em> are provided below.</p>
+<table>
+<thead>
+<tr class="header">
+<th>srcs</th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>99.87</td>
+<td>15.20</td>
+<td>14.43</td>
+<td>8.15</td>
+<td>3.85</td>
+<td>7.35</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>9.50</td>
+<td>100.00</td>
+<td>15.37</td>
+<td>8.71</td>
+<td>4.60</td>
+<td>8.20</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>11.97</td>
+<td>21.79</td>
+<td>99.20</td>
+<td>9.09</td>
+<td>5.83</td>
+<td>9.49</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>6.85</td>
+<td>12.00</td>
+<td>9.84</td>
+<td>99.90</td>
+<td>3.37</td>
+<td>7.32</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>3.51</td>
+<td>6.92</td>
+<td>5.86</td>
+<td>4.06</td>
+<td>99.91</td>
+<td>3.63</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>6.99</td>
+<td>11.06</td>
+<td>9.54</td>
+<td>8.00</td>
+<td>3.59</td>
+<td>99.74</td>
+</tr>
+<tr class="odd">
+<td>ur</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>19.55</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.00</td>
+</tr>
+</tbody>
+</table>
+<h4 id="encoded-representations">Encoded Representations</h4>
+<p>To obtain fixed-dimensional sentence representations for a variable length input sequence, we follow <span class="citation">Zhang et al. (<a href="#ref-zhang2018learning">2018</a>)</span> to use a concatenation of max-pooled features over time and the mean across the time-steps each individually L2 normalized. Below, we detail an ablation study by varying possibilities and found that this representation gave best results. Once we reaffirm the extracted features work best among those proposed, we attempt to visualize the <em>Mann Ki Baat</em> dataset in lower dimensions to seek what properties are strong in the encoded representations at a macro scale.</p>
+<h5 id="nearest-neighbours">Nearest Neighbours</h5>
+<p>First, we attempt to analyze over the test set for a give source and target in languages <span class="math inline">\(xx\)</span>, <span class="math inline">\(yy\)</span> respectively, embeddings generated to translation to which languages <span class="math inline">\(\hat{xx}\)</span>, <span class="math inline">\(\hat{yy}\)</span> respectively works the best. To this end, we collect the embeddings from encoder representations for each source attempted to translate to a language. For each sample, we obtain the nearest neighbours in other languages using <code>faiss</code><a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> <span class="citation">(Johnson et al., <a href="#ref-johnson2019billion">2019</a>)</span>.</p>
+<p>For the above experiment, we report the overall precision@1 over each pair of languages in the table below. The columns represent the source whose language of the sample whose nearest neighbour is being retrieved. The row indicates the target language samples which are being queried. Precision is computed in the information retrieval sense as</p>
+<p><span class="math display">\[ \mathrm{p@k} = \frac{\#(\mathrm{relevant} \cap \mathrm{retrieved})}{\# \mathrm{retrieved}} \]</span></p>
+<p>A retrieval is considered relevent if it belongs to the same multilingual sample as the query.</p>
+<table>
+<caption>Precision@1 on cross-language translation retrieval. mean-max for aggregation from time-steps. Better than a random classifier at least.</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.317</td>
+<td>0.483</td>
+<td>0.306</td>
+<td>0.173</td>
+<td>0.310</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.332</td>
+<td>1.000</td>
+<td>0.471</td>
+<td>0.243</td>
+<td>0.106</td>
+<td>0.199</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td><strong>0.491</strong></td>
+<td><strong>0.513</strong></td>
+<td>1.000</td>
+<td><strong>0.344</strong></td>
+<td><strong>0.200</strong></td>
+<td><strong>0.325</strong></td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.286</td>
+<td>0.199</td>
+<td>0.292</td>
+<td>1.000</td>
+<td>0.151</td>
+<td>0.260</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.113</td>
+<td>0.071</td>
+<td>0.139</td>
+<td>0.119</td>
+<td>1.000</td>
+<td>0.118</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.271</td>
+<td>0.181</td>
+<td>0.270</td>
+<td>0.268</td>
+<td>0.153</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<p>
+<button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#ablationFeatTables" aria-expanded="false" aria-controls="ablationFeatTables">
+Why the above features are best? Expand P@1 tables for other features.
+</button>
+</p>
+<div id="ablationFeatTables" class="collapse">
+<table>
+<caption>p@1 for max-pooled features</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.236</td>
+<td>0.426</td>
+<td>0.266</td>
+<td>0.140</td>
+<td>0.256</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.245</td>
+<td>1.000</td>
+<td>0.443</td>
+<td>0.168</td>
+<td>0.075</td>
+<td>0.153</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.420</td>
+<td>0.428</td>
+<td>1.000</td>
+<td>0.270</td>
+<td>0.164</td>
+<td>0.261</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.260</td>
+<td>0.152</td>
+<td>0.255</td>
+<td>1.000</td>
+<td>0.133</td>
+<td>0.247</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.120</td>
+<td>0.067</td>
+<td>0.148</td>
+<td>0.117</td>
+<td>1.000</td>
+<td>0.122</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.246</td>
+<td>0.144</td>
+<td>0.253</td>
+<td>0.243</td>
+<td>0.134</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for max-pooled features followed by L2-Normalization</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.110</td>
+<td>0.323</td>
+<td>0.186</td>
+<td>0.090</td>
+<td>0.186</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.168</td>
+<td>1.000</td>
+<td>0.316</td>
+<td>0.110</td>
+<td>0.046</td>
+<td>0.104</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.343</td>
+<td>0.278</td>
+<td>1.000</td>
+<td>0.202</td>
+<td>0.116</td>
+<td>0.196</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.194</td>
+<td>0.081</td>
+<td>0.193</td>
+<td>1.000</td>
+<td>0.105</td>
+<td>0.191</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.071</td>
+<td>0.027</td>
+<td>0.084</td>
+<td>0.089</td>
+<td>1.000</td>
+<td>0.088</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.164</td>
+<td>0.066</td>
+<td>0.163</td>
+<td>0.174</td>
+<td>0.097</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for aggregated-by-mean features</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.245</td>
+<td>0.412</td>
+<td>0.246</td>
+<td>0.136</td>
+<td>0.266</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.290</td>
+<td>1.000</td>
+<td>0.409</td>
+<td>0.188</td>
+<td>0.079</td>
+<td>0.160</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.452</td>
+<td>0.447</td>
+<td>1.000</td>
+<td>0.290</td>
+<td>0.165</td>
+<td>0.284</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.259</td>
+<td>0.149</td>
+<td>0.251</td>
+<td>1.000</td>
+<td>0.125</td>
+<td>0.239</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.105</td>
+<td>0.053</td>
+<td>0.116</td>
+<td>0.099</td>
+<td>1.000</td>
+<td>0.108</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.248</td>
+<td>0.140</td>
+<td>0.240</td>
+<td>0.222</td>
+<td>0.122</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for aggregated-by-mean features followed by L2-Normalization</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.305</td>
+<td>0.457</td>
+<td>0.280</td>
+<td>0.155</td>
+<td>0.284</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.304</td>
+<td>1.000</td>
+<td>0.433</td>
+<td>0.222</td>
+<td>0.096</td>
+<td>0.178</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.459</td>
+<td>0.489</td>
+<td>1.000</td>
+<td>0.317</td>
+<td>0.180</td>
+<td>0.299</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.263</td>
+<td>0.188</td>
+<td>0.272</td>
+<td>1.000</td>
+<td>0.133</td>
+<td>0.234</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.103</td>
+<td>0.070</td>
+<td>0.128</td>
+<td>0.104</td>
+<td>1.000</td>
+<td>0.106</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.251</td>
+<td>0.172</td>
+<td>0.253</td>
+<td>0.244</td>
+<td>0.135</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for concatenated mean and max features</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.290</td>
+<td>0.479</td>
+<td>0.300</td>
+<td>0.170</td>
+<td>0.299</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.307</td>
+<td>1.000</td>
+<td>0.497</td>
+<td>0.213</td>
+<td>0.100</td>
+<td>0.192</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.471</td>
+<td>0.488</td>
+<td>1.000</td>
+<td>0.313</td>
+<td>0.200</td>
+<td>0.303</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.299</td>
+<td>0.189</td>
+<td>0.299</td>
+<td>1.000</td>
+<td>0.152</td>
+<td>0.281</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.144</td>
+<td>0.085</td>
+<td>0.176</td>
+<td>0.132</td>
+<td>1.000</td>
+<td>0.138</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.286</td>
+<td>0.184</td>
+<td>0.295</td>
+<td>0.274</td>
+<td>0.157</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>p@1 for concatenated mean and max features followed by L2 Normalization</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>1.000</td>
+<td>0.152</td>
+<td>0.388</td>
+<td>0.234</td>
+<td>0.123</td>
+<td>0.238</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.234</td>
+<td>1.000</td>
+<td>0.378</td>
+<td>0.155</td>
+<td>0.062</td>
+<td>0.141</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.411</td>
+<td>0.355</td>
+<td>1.000</td>
+<td>0.257</td>
+<td>0.150</td>
+<td>0.253</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.246</td>
+<td>0.115</td>
+<td>0.241</td>
+<td>1.000</td>
+<td>0.134</td>
+<td>0.237</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.094</td>
+<td>0.037</td>
+<td>0.107</td>
+<td>0.107</td>
+<td>1.000</td>
+<td>0.107</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.213</td>
+<td>0.091</td>
+<td>0.205</td>
+<td>0.215</td>
+<td>0.122</td>
+<td>1.000</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>Precision@5 on cross-language translation retrieval. mean-max for aggregation from time-steps. Is this indicative of anything?</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th>bn</th>
+<th>en</th>
+<th>hi</th>
+<th>ml</th>
+<th>ta</th>
+<th>te</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>bn</td>
+<td>0.285</td>
+<td>0.110</td>
+<td>0.144</td>
+<td>0.103</td>
+<td>0.057</td>
+<td>0.091</td>
+</tr>
+<tr class="even">
+<td>en</td>
+<td>0.109</td>
+<td>0.362</td>
+<td>0.151</td>
+<td>0.092</td>
+<td>0.044</td>
+<td>0.072</td>
+</tr>
+<tr class="odd">
+<td>hi</td>
+<td>0.143</td>
+<td>0.144</td>
+<td>0.309</td>
+<td>0.108</td>
+<td>0.067</td>
+<td>0.092</td>
+</tr>
+<tr class="even">
+<td>ml</td>
+<td>0.098</td>
+<td>0.077</td>
+<td>0.089</td>
+<td>0.298</td>
+<td>0.050</td>
+<td>0.079</td>
+</tr>
+<tr class="odd">
+<td>ta</td>
+<td>0.042</td>
+<td>0.032</td>
+<td>0.050</td>
+<td>0.041</td>
+<td>0.259</td>
+<td>0.038</td>
+</tr>
+<tr class="even">
+<td>te</td>
+<td>0.091</td>
+<td>0.070</td>
+<td>0.084</td>
+<td>0.085</td>
+<td>0.052</td>
+<td>0.284</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><small>(But the above is among very little samples. Perhaps I should index with larger representations, to well establish the <em>Mann Ki Baat</em> ones still come close.)</small></p>
+<h5 id="embedding-and-visualizing-in-lower-dimensions">Embedding and visualizing in lower-dimensions</h5>
+<p>In the below images, we illustrate the lower-dimension projections using t-SNE of the sentence embeddings from <em>Mann Ki Baat</em> dataset. We first do a PCA to reduce the dimensions to 20, followed by t-SNE on 2-dimensions.</p>
+<p>The representations are built from multilingual samples of <em>Mann Ki Baat</em>, each entry having attributes identified by the unique tuple source, target and sample-id. Multiple language samples of the same content are indexed by same sample-id.To observe which axis among these forms the grouping which make most sense - we fix a few, while keeing the others varying.</p>
+<p>Note that our methods of embedding to a 2D space of all samples are unsupervised. We proceed to color the resulting datapoints according to the labels extracted as source, target, sample-id and combinations of the same.</p>
+<h6 id="target-space">Target Space</h6>
+<p>In the first case, we color the projections using the target language attribute.</p>
+<p><a href="../static/images/multilingual-embeddings/xx-t2const.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2const.png" class="img-fluid"> </a></p>
+<p>The best grouping is obtained on the target space, implying each the encoder representations group same target language samples together. The results are in agreement with the findings of <span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span>. We’ve possibly learnt the hard way that these sentence representations aren’t that reusable for vector space comparisons as cross lingual retrieval mechanisms. Another interesting thing to note here is that each representations contain the same shapes for all languages.</p>
+<p><small> (TODO: This could suggest that there exists a matrix which can be obtained by solving the Procustes problem similar to <span class="citation">Lample et al. (<a href="#ref-lample2018word">2018</a>)</span> to get a rotation matrix. Update: Google’s submission did SVCCA, which might be more apt a choice.) </small></p>
+<h6 id="source-language-space">Source language space</h6>
+<p><a href="../static/images/multilingual-embeddings/const-t2xx.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/const-t2xx.png" class="img-fluid"> </a></p>
+<p>The source language boundaries still form some subclusters, although not as the target. For a better look, we try to view the source samples embedded for a fixed target language. Given below are encoded representations while attempting to translate to English and Hindi as indicated in the graphs below.</p>
+<div class="row">
+<div class="col-6">
+<p><a href="../static/images/multilingual-embeddings/xx-t2en.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2en.png" class="img-fluid"> </a></p>
+</div>
+<div class="col-6">
+<p><a href="../static/images/multilingual-embeddings/xx-t2hi.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2hi.png" class="img-fluid"> </a></p>
+</div>
+</div>
+<p>It’s observable above that <code>en-t2en</code> directly maps to <code>hi-t2hi</code> and <code>en-t2hi</code> somehow is similar to <code>hi-t2en</code>. But the samples not being overlayed on top of each other is still a problem, as attempts to translate to a single language isn’t likely to produce robust embeddings for cross-lingual sentence representations.</p>
+<h6 id="colored-by-source-and-target">Colored by source and target</h6>
+<p><a href="../static/images/multilingual-embeddings/xx-t2yy.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2yy.png" class="img-fluid"> </a></p>
+<p>The above is a more fine-grained view of the clusters, considering <code>src-tgt</code> as the labels and coloring accordingly.</p>
+<h6 id="same-concepts---different-language.">Same concepts - different language.</h6>
+<p>Next, we encode all sentences to translate to Hindi (<code>xx-t2hi</code>). Since here points are closer in terms of source language rather than similarity in meaning or content, we can conclude that even at a microscopic scale, we’ll need further refinements to use these embeddings as multilingual sentence representations.</p>
+<p><a href="../static/images/multilingual-embeddings/multilingual-samples.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/multilingual-samples.png" class="img-fluid"></p>
+<p></a></p>
+<p>Above, we check if multilingual closeness exists, and turns out it doesn’t. English and Hindi seems to have their own close spaces, while the others are a bit cluttered. This also seems to correlate with the size of data we have in each languages, the degree of intra-language closeness and inter-language separation. Perhaps once the data matches up in other languages, we could see how this evolves.</p>
+<!--
+#### Metric Learning for better representations
+
+\[TODO\]
+
+#### Evaluations/Benchmarking
+
+We use the encoder representations to train a network for the
+Hindi-English natural language inference task in @conneau2018xnli. This
+lets us benchmark the remaining results bridging to other numbers in
+literature.
+-->
+<h2 id="literature-survey">Literature Survey</h2>
+<h6 id="multilingual-translation">Multilingual Translation</h6>
+<p><span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span> introduced Multilingual Neural Machine Translation switching target language based on a token prepended to the input sequence. This simple method demonstrated major improvements and zero-shot capability in translation. If the parameters of the encoder and decoder and respective embeddings are shared among all languages, a consequence is that the encoder outputs become cross-lingual representations of the concept in the source language.</p>
+<h6 id="feature-extraction">Feature Extraction</h6>
+<p><span class="citation">Zhang et al. (<a href="#ref-zhang2018learning">2018</a>)</span> adapts the encoder architecture from the transformer model proposed by <span class="citation">Vaswani et al. (<a href="#ref-vaswani2017attention">2017</a>)</span> as sentence representation learning models. They however investigate the utility through downstream tasks constructing the sentence-representations through an autoencoding objective on the sentences. <span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span> uses max-pooled features across timesteps, which seems to be working out well for their use cases.</p>
+<h6 id="mining-parallel-pairs">Mining Parallel Pairs</h6>
+<p>Past works in multilingual mining have made significant use of representations arising out of translation task [<span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span>, <span class="citation">Schwenk (<a href="#ref-schwenk2018filtering">2018</a>)</span>, <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019margin">2019</a><a href="#ref-artetxe2019margin">a</a>)</span>, <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span>]. Since mining is enabled by the ability to query a sample in the vector space induced by translation, most of these work becomes relevant to the likes of cross-lingual sentence embeddings.</p>
+<p><span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span> proposes the following desired properties: (i) multilingual closeness, (ii) semantic closeness, (iii) preservation of content, (iv) scalability to many languages. <span class="citation">Schwenk (<a href="#ref-schwenk2018filtering">2018</a>)</span> uses cosine similarity, for the same representation and applies it to the BUCC task. They conclude the distance can be used in confidence estimation or to filter backtranslations. <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019margin">2019</a><a href="#ref-artetxe2019margin">a</a>)</span> strips the encoder inputs off source or target language information, having embeddings corresponding to target fed to the decoder instead, thereby providing “encoded-representations” of the sequence in a common space.</p>
+<ul>
+<li><small>The error rates reported are low. Quite unsure if our embeddings on <em>Mann Ki Baat</em> matches up to this degree. The nearest neighbour retrieval precision presented before as proxy supports this. Uses vanilla seq2seq NMT models (possibly <span class="citation">Bahdanau et al. (<a href="#ref-bahdanau2014neural">2014</a>)</span> or <span class="citation">Luong et al. (<a href="#ref-luong2015effective">2015</a>)</span>).</small></li>
+<li><small>It may perhaps be interesting to look at the t-SNE dynamics of this modified network.</small></li>
+</ul>
+<h6 id="evaluations">Evaluations</h6>
+<p>The XNLI Dataset [<span class="citation">Conneau et al. (<a href="#ref-conneau2018xnli">2018</a>)</span>] seems to be used by people in the community for benchmarking multiingual embeddings [<span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span>]. Hindi (<code>hi</code>) seems to be the only reported Indian Language in the testing set.</p>
+<p>Often, mining parallel text from news corpus and training a translation system to obtain better BLEU seems to be an assertion in favour of better mining methods. If the representations are robust and performing well, this could indicate their success.</p>
+<h2 id="conclusion-and-future-work">Conclusion and Future Work</h2>
+<p><span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span> seems to be a good way to go to generate sentence embeddings, but requires training from scratch and some modifications to <code>pytorch/fairseq</code>.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-artetxe2019margin">
+<p>Mikel Artetxe and Holger Schwenk. 2019a. Margin-based parallel corpus mining with multilingual sentence embeddings. In <em>Proceedings of the 57th annual meeting of the association for computational linguistics</em>, pages 3197–3203.</p>
+</div>
+<div id="ref-artetxe2019massively">
+<p>Mikel Artetxe and Holger Schwenk. 2019b. Massively multilingual sentence embeddings for zero-shot cross-lingual transfer and beyond. <em>Transactions of the Association for Computational Linguistics</em>, 7:597–610.</p>
+</div>
+<div id="ref-bahdanau2014neural">
+<p>Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio. 2014. Neural machine translation by jointly learning to align and translate. <em>arXiv preprint arXiv:1409.0473</em>.</p>
+</div>
+<div id="ref-conneau2018xnli">
+<p>Alexis Conneau, Ruty Rinott, Guillaume Lample, Adina Williams, Samuel Bowman, Holger Schwenk, and Veselin Stoyanov. 2018. XNLI: Evaluating cross-lingual sentence representations. In <em>Proceedings of the 2018 conference on empirical methods in natural language processing</em>, pages 2475–2485.</p>
+</div>
+<div id="ref-jha2010tdil">
+<p>Girish Nath Jha. 2010. The TDIL Program and the Indian Language Corpora Intitiative (ILCI). In <em>LREC</em>.</p>
+</div>
+<div id="ref-johnson2019billion">
+<p>Jeff Johnson, Matthijs Douze, and Hervé Jégou. 2019. Billion-scale similarity search with gpus. <em>IEEE Transactions on Big Data</em>.</p>
+</div>
+<div id="ref-johnson2017google">
+<p>Melvin Johnson, Mike Schuster, Quoc V Le, Maxim Krikun, Yonghui Wu, Zhifeng Chen, Nikhil Thorat, Fernanda Viégas, Martin Wattenberg, Greg Corrado, and others. 2017. Google’s multilingual neural machine translation system: Enabling zero-shot translation. <em>Transactions of the Association for Computational Linguistics</em>, 5:339–351.</p>
+</div>
+<div id="ref-kunchukuttan2018iit">
+<p>Anoop Kunchukuttan, Pratik Mehta, and Pushpak Bhattacharyya. 2018. The IIT Bombay English-Hindi Parallel Corpus. In <em>Proceedings of the eleventh international conference on language resources and evaluation (lrec-2018)</em>.</p>
+</div>
+<div id="ref-lample2018word">
+<p>Guillaume Lample, Alexis Conneau, Marc’Aurelio Ranzato, Ludovic Denoyer, and Hervé Jégou. 2018. Word translation without parallel data. In <em>International conference on learning representations</em>.</p>
+</div>
+<div id="ref-luong2015effective">
+<p>Minh-Thang Luong, Hieu Pham, and Christopher D Manning. 2015. Effective approaches to attention-based neural machine translation. <em>arXiv preprint arXiv:1508.04025</em>.</p>
+</div>
+<div id="ref-nakazawa2018overview">
+<p>Toshiaki Nakazawa, Katsuhito Sudoh, Shohei Higashiyama, Chenchen Ding, Raj Dabre, Hideya Mino, Isao Goto, Win Pa Pa, Anoop Kunchukuttan, and Sadao Kurohashi. 2018. Overview of the 5th workshop on asian translation. In <em>Proceedings of the 5th workshop on asian translation (wat2018)</em>.</p>
+</div>
+<div id="ref-schwenk2018filtering">
+<p>Holger Schwenk. 2018. Filtering and mining parallel data in a joint multilingual space. In <em>Proceedings of the 56th annual meeting of the association for computational linguistics (volume 2: Short papers)</em>, pages 228–234.</p>
+</div>
+<div id="ref-schwenk2017learning">
+<p>Holger Schwenk and Matthijs Douze. 2017. Learning joint multilingual sentence representations with neural machine translation. In <em>Proceedings of the 2nd workshop on representation learning for nlp</em>, pages 157–167.</p>
+</div>
+<div id="ref-vaswani2017attention">
+<p>Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In <em>Advances in neural information processing systems</em>, pages 5998–6008.</p>
+</div>
+<div id="ref-zhang2018learning">
+<p>Minghua Zhang, Yunfang Wu, Weigang Li, and Wei Li. 2018. Learning universal sentence representations with mean-max attention autoencoder. In <em>Proceedings of the 2018 conference on empirical methods in natural language processing</em>, pages 4514–4523.</p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p><a href="https://github.com/facebookresearch/faiss">github.com/facebookresearch/faiss</a><a href="#fnref1">↩</a></p></li>
+</ol>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>IITB Hindi English - Usable Corpus; Hidden Troubles</title>
+    <link href="http://jerinphilip.github.io/posts/iitb-transfer-check.html" />
+    <id>http://jerinphilip.github.io/posts/iitb-transfer-check.html</id>
+    <published>2018-07-30T00:00:00Z</published>
+    <updated>2018-07-30T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="IITB Hindi English - Usable Corpus; Hidden Troubles" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/iitb-transfer-check.html" />
+        <title>IITB Hindi English - Usable Corpus; Hidden Troubles</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>IITB Hindi English - Usable Corpus; Hidden Troubles</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jul 30, 2018</div>
+
+         
+
+         
+            <div><a href="../tags/posts/ilmt.html">ilmt</a>, <a href="../tags/posts/indian-languages.html">indian-languages</a>, <a href="../tags/posts/mt.html">mt</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#premise">Premise</a></li>
+<li><a href="#architecture-and-framework">Architecture and Framework</a></li>
+<li><a href="#objectives">Objectives</a></li>
+<li><a href="#experiments">Experiments</a><ul>
+<li><a href="#individual-datasets">Individual Datasets</a></li>
+<li><a href="#transfer-across-constituents">Transfer across constituents</a><ul>
+<li><a href="#inferences">Inferences</a></li>
+</ul></li>
+<li><a href="#refining-training-data-based-on-transfer-stats">Refining training data based on transfer stats</a><ul>
+<li><a href="#quantitative">Quantitative</a></li>
+<li><a href="#qualitative">Qualitative</a></li>
+<li><a href="#conclusions">Conclusions</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#forward">Forward</a><ul>
+<li><a href="#better-data-sampling">Better(?) Data Sampling</a></li>
+</ul></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><small> This post was written 2 years back in a website I used to report results back to my advisor. I spent quite some time doing quite unnecessary stuff, figuring out what was wrong why I was getting astonishingly poor results compared to those reported in literature. The <a href="http://www.cfilt.iitb.ac.in/iitb_parallel/">corpus page</a> had briefly a filtered version from <a href="https://github.com/deciphyre">Saumitra Yadav</a>, which I thought was nice gesture and since seem to have taken off the same. To point to the general people why not to use a corpus as is, from my hard learnings, I publish the post backdated with my experiences here. The post is added to this site on 2020 November 28.</small></p>
+<p><small>Some of the writing in this document is not very kind, account for that it was from an irritated research-scholar who was held to explain why he had poor results from a strong faculty-advisor, and had to go and do a set of brute-force experiments which would not go anywhere to publication. I have since built many resources out of usable parts of IITB Hindi English corpus, which I am grateful to the people who released the resources for, and in process empathize with their plights as well. </small></p>
+<h1 id="premise">Premise</h1>
+<p>I’ve been trying to produce results with the IIT-Bombay Hindi English parallel corpus, but the dataset doesn’t seem to be giving good results at all, for NMT.</p>
+<p>I’m in no way able to match scores reported by IIT-B teams, with some tinkering and adjustment based the training corpus, I can fine tune it for the test set - but still I have doubts of the suitability of IIT-Bombay Hindi English parallel corpus as a good training set for neural machine translation.</p>
+<h1 id="architecture-and-framework">Architecture and Framework</h1>
+<ul>
+<li>Framework: <a href="https://github.com/OpenNMT/OpenNMT-py/">OpenNMT-py</a></li>
+<li>Preprocessing:</li>
+<li>Primitive Tokenization (Whitespace, punctuation based)</li>
+<li><p><a href="https://github.com/OpenNMT/OpenNMT-py/blob/master/tools/bpe_pipeline.sh">BPE</a></p></li>
+<li>Model Architecture:
+<ul>
+<li>Encoder: BRNN, 500 Neurons x 2 Layers</li>
+<li>Decoder: RNN, 500 Neurons x 2 Layers</li>
+<li>Attention: Luong’s General Attention</li>
+</ul></li>
+<li><p>Decoding: Beam Search, beam width 5.</p></li>
+<li>Training Configurations:
+<ul>
+<li>100 Epochs.</li>
+<li>Model with best (Validation Accuracy, Validation Perplexity) chosen for testing.</li>
+</ul></li>
+<li>Testing:
+<ul>
+<li>Replace unknowns with nearest word using attention.</li>
+</ul></li>
+</ul>
+<h1 id="objectives">Objectives</h1>
+<ul>
+<li><p>Throughout my method, I’ll keep my model constant - since I’m primarily interested in how data affects training and generalization.</p></li>
+<li><p>To figure out what exactly is happening, to see if the individual datasets that constitutes the IIT-Bombay corpus would do any better.</p></li>
+<li><p>See how well one dataset transfers to other - use these edge-weights as a metric to combine datasets for a better training set.</p></li>
+</ul>
+<h1 id="experiments">Experiments</h1>
+<h2 id="individual-datasets">Individual Datasets</h2>
+<p>The following are the results on the individual corpora that constitutes IIT-B Hindi-English parallel dataset provided.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Section</th>
+<th>B-1</th>
+<th>B-2</th>
+<th>B-3</th>
+<th>B-4</th>
+<th>BLEU</th>
+<th>Perplexity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>gnome</td>
+<td>74.1</td>
+<td>63.7</td>
+<td>58.8</td>
+<td>55.6</td>
+<td>54.87</td>
+<td>1.17</td>
+</tr>
+<tr class="even">
+<td>tanzil</td>
+<td>59.8</td>
+<td>42.2</td>
+<td>37.5</td>
+<td>35.7</td>
+<td>33.54</td>
+<td>1.07</td>
+</tr>
+<tr class="odd">
+<td>ted</td>
+<td>55.6</td>
+<td>30.1</td>
+<td>17.8</td>
+<td>11.0</td>
+<td>23.16</td>
+<td>12.66</td>
+</tr>
+<tr class="even">
+<td>govtweb</td>
+<td>49.2</td>
+<td>23.2</td>
+<td>12.3</td>
+<td>7.3</td>
+<td>14.37</td>
+<td>40.01</td>
+</tr>
+<tr class="odd">
+<td>hiencorp</td>
+<td>45.6</td>
+<td>21.3</td>
+<td>12.1</td>
+<td>7.7</td>
+<td>14.03</td>
+<td>20.41</td>
+</tr>
+<tr class="even">
+<td>mahashabdkosh</td>
+<td>40.6</td>
+<td>16.8</td>
+<td>6.9</td>
+<td>3.3</td>
+<td>10.26</td>
+<td>63.01</td>
+</tr>
+<tr class="odd">
+<td>books</td>
+<td>39.6</td>
+<td>13.0</td>
+<td>4.8</td>
+<td>2.0</td>
+<td>7.29</td>
+<td>41.39</td>
+</tr>
+<tr class="even">
+<td>judicial</td>
+<td>22.6</td>
+<td>4.2</td>
+<td>1.0</td>
+<td>0.3</td>
+<td>1.90</td>
+<td>125.82</td>
+</tr>
+<tr class="odd">
+<td>indicparallel</td>
+<td>4.8</td>
+<td>1.7</td>
+<td>0.9</td>
+<td>0.4</td>
+<td>1.34</td>
+<td>307.91</td>
+</tr>
+<tr class="even">
+<td>opensubs</td>
+<td>32.7</td>
+<td>7.9</td>
+<td>2.9</td>
+<td>0.8</td>
+<td>1.25</td>
+<td>123.40</td>
+</tr>
+<tr class="odd">
+<td>kde</td>
+<td>2.7</td>
+<td>1.1</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>255.67</td>
+</tr>
+<tr class="even">
+<td>wikihead</td>
+<td>9.2</td>
+<td>6.7</td>
+<td>2.9</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>1252.89</td>
+</tr>
+<tr class="odd">
+<td>hienwnetlinkage</td>
+<td>0.1</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>1485.97</td>
+</tr>
+<tr class="even">
+<td>tatoeba</td>
+<td>22.7</td>
+<td>4.1</td>
+<td>0.2</td>
+<td>0.0</td>
+<td>0.00</td>
+<td>199.22</td>
+</tr>
+<tr class="odd">
+<td><strong>whole</strong></td>
+<td><strong>11.4</strong></td>
+<td><strong>1.0</strong></td>
+<td><strong>1.2</strong></td>
+<td><strong>0.1</strong></td>
+<td><strong>0.0</strong></td>
+<td><strong>173.68</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Some notes: 1. I’m using <code>train, dev, test = (0.8, 0.05, 0.15)</code> for the individual corpus, randomly sampling for all three, without replacement. 2. The <strong>whole</strong> values are reported on IIT-B parallel dataset splits of <code>train, dev, test</code>.</p>
+<h2 id="transfer-across-constituents">Transfer across constituents</h2>
+<p>My experiments are similar to the ones performed in <a href="https://arxiv.org/abs/1706.03872">Six Challenges for Neural Machine Translation</a>. I’m using only subsets of the corpus wherein the perplexity is reported to be low/high-BLEU is reported on the individual training, since I don’t expect the others to transfer at all.</p>
+<p>BLEU scores are reported below, upon transfer from columns to the dataset indicated on the row.</p>
+<table>
+<thead>
+<tr class="header">
+<th>transfer</th>
+<th>books</th>
+<th>govtweb</th>
+<th>hiencorp</th>
+<th>tanzil</th>
+<th>ted</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>books</td>
+<td>7.29</td>
+<td>3.92</td>
+<td>5.11</td>
+<td>0.15</td>
+<td>2.36</td>
+</tr>
+<tr class="even">
+<td>gnome</td>
+<td>0.86</td>
+<td>4.17</td>
+<td><strong>39.86</strong></td>
+<td>0.0</td>
+<td>4.33</td>
+</tr>
+<tr class="odd">
+<td>govtweb</td>
+<td><strong>9.57</strong></td>
+<td><strong>14.37</strong></td>
+<td>9.7</td>
+<td>0.07</td>
+<td>3.67</td>
+</tr>
+<tr class="even">
+<td>hiencorp</td>
+<td>3.92</td>
+<td>4.41</td>
+<td>14.03</td>
+<td>0.1</td>
+<td>2.91</td>
+</tr>
+<tr class="odd">
+<td>hienwnetlinkage</td>
+<td>0.0</td>
+<td>0.26</td>
+<td>0.95</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td>indicparallel</td>
+<td>4.37</td>
+<td>3.31</td>
+<td><strong>19.58</strong></td>
+<td>0.0</td>
+<td>1.41</td>
+</tr>
+<tr class="odd">
+<td>judicial</td>
+<td>8.16</td>
+<td>8.27</td>
+<td>8.47</td>
+<td>0.0</td>
+<td>5.03</td>
+</tr>
+<tr class="even">
+<td>kde</td>
+<td>0.45</td>
+<td><strong>12.88</strong></td>
+<td><strong>13.51</strong></td>
+<td>0.0</td>
+<td>6.89</td>
+</tr>
+<tr class="odd">
+<td>mahashabdkosh</td>
+<td>7.31</td>
+<td>9.44</td>
+<td>6.99</td>
+<td>0.0</td>
+<td>5.08</td>
+</tr>
+<tr class="even">
+<td>opensubs</td>
+<td>3.05</td>
+<td>4.01</td>
+<td>6.46</td>
+<td>0.0</td>
+<td><strong>11.83</strong></td>
+</tr>
+<tr class="odd">
+<td>tanzil</td>
+<td>1.16</td>
+<td>0.53</td>
+<td>1.01</td>
+<td><strong>33.54</strong></td>
+<td>0.82</td>
+</tr>
+<tr class="even">
+<td>tatoeba</td>
+<td><strong>11.51</strong></td>
+<td><strong>12.58</strong></td>
+<td><strong>16.1</strong></td>
+<td>0.42</td>
+<td>7.22</td>
+</tr>
+<tr class="odd">
+<td>ted</td>
+<td>4.79</td>
+<td>6.89</td>
+<td>9.48</td>
+<td>0.23</td>
+<td><strong>23.16</strong></td>
+</tr>
+<tr class="even">
+<td>wikihead</td>
+<td>0.17</td>
+<td>7.78</td>
+<td><strong>36.13</strong></td>
+<td>0.0</td>
+<td>0.84</td>
+</tr>
+<tr class="odd">
+<td><strong>iitb-parallel</strong></td>
+<td><strong>5.04</strong></td>
+<td><strong>5.37</strong></td>
+<td><strong>5.37</strong></td>
+<td><strong>0.0</strong></td>
+<td><strong>3.96</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="inferences">Inferences</h3>
+<p>I’m putting forth the following take-aways from the above table.</p>
+<ul>
+<li>Looks to me like books, govtweb, hiencorp and ted are what would be useful part of the datasets which would generalize to the dev/test sets given - news crawls.</li>
+<li>I’ll however try a few more combinations, see the variation.</li>
+<li>Distributions distant from the test set may end up hurting the model, trying to generalize on a more diverse corpus.
+<ul>
+<li>I’m going to call tanzil, gnome, kde, dictionaries - mostly noise and distant.</li>
+</ul></li>
+<li><strong>hiencorp</strong> transfers well to <strong>gnome</strong> - this is unexpected. Perhaps the same scenario in the larger dataset applies to hiencorp as well.</li>
+</ul>
+<h2 id="refining-training-data-based-on-transfer-stats">Refining training data based on transfer stats</h2>
+<p>I’ll try just IIT-B test set now, using models trained on combination of the above corpora.</p>
+<h3 id="quantitative">Quantitative</h3>
+<p>The percentage of actual training data used to obtain the BLEU is indicated. We’re able to achieve better results with a fraction of the training set.</p>
+<table>
+<thead>
+<tr class="header">
+<th>combination</th>
+<th>% of iitb-train</th>
+<th>BLEU on iitb-test</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>govtweb + hiencorp + ted + tatoeba + indicparallel + opensubs</td>
+<td>24.28</td>
+<td>9.62</td>
+</tr>
+<tr class="even">
+<td>govtweb + hiencorp + ted</td>
+<td>23.24</td>
+<td>9.94</td>
+</tr>
+<tr class="odd">
+<td>govtweb + ted + books</td>
+<td>21.03</td>
+<td>10.22</td>
+</tr>
+<tr class="even">
+<td>govtweb + hiencorp + ted + books + wikihead</td>
+<td>37.18</td>
+<td>10.50</td>
+</tr>
+<tr class="odd">
+<td>govtweb + hiencorp + ted + books</td>
+<td>35.41</td>
+<td>10.86</td>
+</tr>
+</tbody>
+</table>
+<h3 id="qualitative">Qualitative</h3>
+<p>10 is reasonably good enough BLEU for translations to make sense. At this point, it may be a good idea to <a href="https://jerinphilip.github.io/d3-sandbox/exps/iitb-debug/">look at data</a>.<br />
+The translations for refined-4 are most likely the best. And most make sense, they’re not complete garbage at the very least.</p>
+<h3 id="conclusions">Conclusions</h3>
+<p>I think it’s reasonable enough to make the following conclusions at this point:</p>
+<ul>
+<li><p>BLEU is a bad, horrible metric. At least, for NMT based approaches, we need a consensus based metric with multiple hypotheses for an input sentence.</p></li>
+<li>IITB Hindi English Corpus is a disaster. Maybe a necessary evil to some people - but I’d say more trouble than it’s worth.
+<ul>
+<li>Corpus has collected data from a mountain load of sources, most of which are practically useless in generalizing to newscrawl.</li>
+<li>I’m not even sure if the test set is learnable at all from the train-set. When creating datasets to benchmark - at least the train set should contain data enough to learn a distribution which the test is also drawn from. I’m pretty certain test-set contains completely new vocabularies.</li>
+<li>There is scope for releasing a new natural dataset, than this mess of a dataset.</li>
+</ul></li>
+</ul>
+<h1 id="forward">Forward</h1>
+<h3 id="better-data-sampling">Better(?) Data Sampling</h3>
+<p>Related: <a href="https://arxiv.org/pdf/1708.00712.pdf">Dynamic Data Selection for NMT</a></p>
+<p>One thing I’ve seen a lot while training character language models are that frequent patterns are learnt quickly - and the perplexities of these tend to be lower.</p>
+<p>OpenNMT-py has a <a href="http://forum.opennmt.net/t/metrics-bleu-ppl-gold-ppl-pred/249">bunch of metrics</a> which quantify the above, and I believe these maybe of use to capture what would be the trainable “good” corpus within the training set.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>Sampling from Distributions</title>
+    <link href="http://jerinphilip.github.io/posts/sampling-from-distributions.html" />
+    <id>http://jerinphilip.github.io/posts/sampling-from-distributions.html</id>
+    <published>2018-07-18T00:00:00Z</published>
+    <updated>2018-07-18T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Sampling from Distributions" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/sampling-from-distributions.html" />
+        <title>Sampling from Distributions</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Sampling from Distributions</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jul 18, 2018</div>
+
+         
+            <div>By Jerin Philip</div>
+         
+
+         
+            <div><a href="../tags/posts/sampling.html">sampling</a>, <a href="../tags/posts/distributions.html">distributions</a>, <a href="../tags/posts/probability.html">probability</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#premise">Premise</a></li>
+<li><a href="#lets-sample">Let’s sample</a><ul>
+<li><a href="#inverse-transform-sampling">Inverse Transform Sampling</a></li>
+<li><a href="#verification">Verification</a></li>
+</ul></li>
+<li><a href="#karpathys-char-rnn">Karpathy’s Char RNN</a><ul>
+<li><a href="#temperature">Temperature</a></li>
+</ul></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><h1 id="premise">Premise</h1>
+<p>The objective we start with simple. I have a device which can get me a random number, hopefully uniformly distributed. Now using this device, I’m to generate other distributions.</p>
+<p>I’ve most likely come across fragments of code which does this, without being able to generalize. I can recollect sometime back, when <a href="https://researchweb.iiit.ac.in/~harishkrishna.v/">Harish</a> told me something about taking a cumulative distribution function (CDF) and projecting on the y-axis, but <a href="https://en.wikipedia.org/wiki/Inverse_transform_sampling#Examples">it</a> never really sunk in.</p>
+<p>When I took Topics in Machine Learning in my undergrad final year, <a href="https://jeremykun.com/2013/11/08/adversarial-bandits-and-the-exp3-algorithm/">EXP3</a> algorithm in a Multi-Arm Bandit setting required me to draw an arm with the probabilities of the arms being updated at every step. I figured Jeremy Kun’s code segment was enough under the time constraints - and forgot about it in a while.</p>
+<p>Around the start of this month, when I got to using temperature for adjusting a distribution to generate more likely but still diverse samples for a version of <a href="http://karpathy.github.io/2015/05/21/rnn-effectiveness/">Karpathy</a>’s <a href="https://github.com/karpathy/char-rnn">char-rnn</a>, I stumbled across sampling again, and that was it.</p>
+<p>At this point, I strongly suspect <a href="https://www.math.uci.edu/icamp/courses/math77c/demos/hist_eq.pdf">Histogram Equalization</a> which was taught in Digital Image Processing, which I implemented once and left to rust since then is also somehow connected to this.</p>
+<p>This post is hence a visit down memory lane, linking and strengthening concepts I most likely missed in the past.</p>
+<h1 id="lets-sample">Let’s sample</h1>
+<p>I’ll be using pytorch for operating on tensors.</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python"><span class="im">import</span> torch.nn.functional <span class="im">as</span> F
+<span class="im">import</span> torch
+<span class="im">from</span> matplotlib <span class="im">import</span> pyplot <span class="im">as</span> plt
+<span class="op">%</span>matplotlib inline</code></pre></div>
+<p>For our purposes, we use <code>randn</code> to generate a 1-D tensor of random numbers, on which we apply softmax to convert them to probabilities. These are the probabilites which we’ll use to sample indices.</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python">n <span class="op">=</span> <span class="dv">10</span>
+acts <span class="op">=</span> torch.randn(n)
+<span class="bu">print</span>(acts)
+probs <span class="op">=</span> F.softmax(acts, dim<span class="op">=</span><span class="dv">0</span>)</code></pre></div>
+<p>The following auxilliary function helps us visualize the distribution.</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python"><span class="kw">def</span> plot_probs_bar(vals):
+    H, <span class="op">=</span> vals.size()
+    xs <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(H))
+    vals <span class="op">=</span> vals<span class="op">/</span>vals.<span class="bu">sum</span>()
+    ys <span class="op">=</span> vals.tolist()
+    plt.ylim(<span class="dv">0</span>, <span class="dv">1</span>)
+    plt.bar(xs, ys)
+
+plot_probs_bar(probs)</code></pre></div>
+<h2 id="inverse-transform-sampling">Inverse Transform Sampling</h2>
+<p>From wikipedia:</p>
+<blockquote>
+<p>Let <span class="math inline">\(X\)</span> be a random variable whose distribution can be described by the cumulative distribution <span class="math inline">\(F_{X}\)</span>. We want to generate values of which <span class="math inline">\(X\)</span> are distributed according to this distribution.</p>
+<p>The inverse transform sampling method works as follows:</p>
+<ol style="list-style-type: decimal">
+<li>Generate a random number <span class="math inline">\(u\)</span> from the standard uniform distribution in the interval <span class="math inline">\([0,1]\)</span>.<br />
+</li>
+<li>Compute the value <span class="math inline">\(x\)</span> such that <span class="math inline">\(F_X(x)=u\)</span>.<br />
+</li>
+<li>Take <span class="math inline">\(x\)</span> to be the random number drawn from the distribution described by <span class="math inline">\(F_x\)</span></li>
+</ol>
+</blockquote>
+<p>Step 2 is a whole lot easier if one can find <span class="math inline">\(F^{-1}\)</span>.</p>
+<p>Python’s <code>random.random()</code> samples from a uniform distribution between <span class="math inline">\([0, 1)\)</span>. I guess that’ll suffice as a starting point. Let’s say we have to randomly choose one from <code>n</code> samples, each with probability given by <code>probs[i]</code>, the following function can do the job.</p>
+<p><a href="https://github.com/j2kun/exp3/blob/master/probability.py#L7">Jeremy Kun’s draw</a> is very similar.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python"><span class="im">import</span> random
+
+<span class="kw">def</span> draw(probs):
+    val <span class="op">=</span> random.random()
+    csum <span class="op">=</span> <span class="dv">0</span>
+    <span class="cf">for</span> i, p <span class="kw">in</span> <span class="bu">enumerate</span>(probs):
+        csum  <span class="op">+=</span> p
+        <span class="cf">if</span> csum <span class="op">&gt;</span> val:
+            <span class="cf">return</span> i</code></pre></div>
+<h2 id="verification">Verification</h2>
+<p>How do we verify, in the limit of a lot of samples - if the distribution of selections look like what we intended? We simulate the situation, obviously. I make 10,000 draws to check if the counts when normalized looks like the probability distribution.</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python"><span class="im">from</span> collections <span class="im">import</span> defaultdict
+
+<span class="kw">def</span> check_sampling(probs):
+    max_samples <span class="op">=</span> <span class="dv">10000</span>
+    counter <span class="op">=</span> defaultdict(<span class="bu">int</span>)
+    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(max_samples):
+        choice <span class="op">=</span> draw(probs)
+        counter[choice] <span class="op">+=</span> <span class="dv">1</span>
+
+    vals <span class="op">=</span> torch.Tensor(<span class="bu">list</span>(counter.values()))
+    <span class="cf">return</span> plot_probs_bar(vals)
+
+check_sampling(probs)</code></pre></div>
+<p>If the above plot ends up being similar to the one given by just probabilities, it works. Turns out, it works.</p>
+<div class="row">
+<div class="col">
+<div class="figure">
+<img src="../static/images/sampling-from-distributions/probs.png" alt="used for sampling" />
+<p class="caption">used for sampling</p>
+</div>
+</div>
+<div class="col">
+<div class="figure">
+<img src="../static/images/sampling-from-distributions/dist.png" alt="obtained after sampling" />
+<p class="caption">obtained after sampling</p>
+</div>
+</div>
+</div>
+<h1 id="karpathys-char-rnn">Karpathy’s Char RNN</h1>
+<p>The output layer of Karpathy’s char-rnn predicts probability of certain given classes. For a task like translation or nearly anything involving classification, <code>argmax</code> of the probabilities is the obvious choice. But since we’re hallucinating valid sequences - we have to randomly sample from the most probable choices.</p>
+<p>For this, we skew the distribution to increase the probabilities of likely samples, and decreasing the probabilties of unlikely samples. Temperature acts as the control knob here, and the following illustration (hopefully) convinces why.</p>
+<h2 id="temperature">Temperature</h2>
+<p><span class="math display">\[ \mathrm{softmax}(x, T)  = \frac{e^{x_i/T}}{\sum{e^{x_i/T}}}\]</span></p>
+<p>I’ll model my <code>TSoftmax</code> as a functor, which uses pytorch’s nn.Module.</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python"><span class="kw">class</span> TSoftmax(nn.Module):
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, temperature):
+        <span class="bu">super</span>().<span class="fu">__init__</span>()
+        <span class="va">self</span>.T <span class="op">=</span> temperature
+
+    <span class="kw">def</span> forward(<span class="va">self</span>, tensor):
+        <span class="co"># Take all samples, divide them by T, pass through exp(x)</span>
+        entries <span class="op">=</span> tensor.data.view(<span class="op">-</span><span class="dv">1</span>).div(<span class="va">self</span>.T).exp()
+        <span class="cf">return</span> entries<span class="op">/</span>entries.<span class="bu">sum</span>()</code></pre></div>
+<p>If <span class="math inline">\(T = 1\)</span>, the above reduces to simple softmax. So, let’s try a few samples <span class="math inline">\(T \lt 1\)</span>, and <span class="math inline">\(T \gt 1\)</span>, see how the probability distribution we use to sample from changes.</p>
+<div class="sourceCode"><pre class="sourceCode py"><code class="sourceCode python">m <span class="op">=</span> <span class="dv">4</span>
+less_than_one <span class="op">=</span> [<span class="dv">2</span><span class="op">**</span>(<span class="op">-</span>b) <span class="cf">for</span> b <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, m)]
+greater_than_one <span class="op">=</span> [<span class="dv">2</span><span class="op">**</span>(b) <span class="cf">for</span> b <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, m)]
+
+tvals <span class="op">=</span> <span class="bu">list</span>(<span class="bu">reversed</span>(less_than_one)) <span class="op">+</span> [<span class="dv">1</span>]  <span class="op">+</span> greater_than_one
+n_tvals <span class="op">=</span> <span class="bu">len</span>(tvals)
+
+plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">30</span>))
+
+<span class="cf">for</span> i, T <span class="kw">in</span> <span class="bu">enumerate</span>(tvals):
+    v <span class="op">=</span> i<span class="op">+</span><span class="dv">1</span>
+    ax1 <span class="op">=</span> plt.subplot(n_tvals,<span class="dv">1</span>,v)
+    ax1.set_title(<span class="st">&quot;t = </span><span class="sc">{}</span><span class="st">&quot;</span>.<span class="bu">format</span>(T))
+    transform <span class="op">=</span> TSoftmax(temperature <span class="op">=</span> T)
+    tprobs <span class="op">=</span> transform(acts)
+    plot_probs_bar(tprobs)</code></pre></div>
+<div class="figure">
+<img src="../static/images/sampling-from-distributions/temperature_variance.png" alt="temperature variation" />
+<p class="caption">temperature variation</p>
+</div>
+<p>Increase in <span class="math inline">\(T\rightarrow \infty\)</span> leads to uniform distribution, decrease in <span class="math inline">\(T \rightarrow 0\)</span> leads to argmax situation. Thus, our good values for hallucinating could be somewhere in <span class="math inline">\([0.5, 0.7]\)</span>.</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>except he uses <code>weights</code> which aren’t normalized and uses a choice from a uniform distribution of <code>[0, sum(weights)]</code> instead. Most likely an overkill, imo.<a href="#fnref1">↩</a></p></li>
+</ol>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>OpenCV4Android</title>
+    <link href="http://jerinphilip.github.io/posts/opencv-android.html" />
+    <id>http://jerinphilip.github.io/posts/opencv-android.html</id>
+    <published>2016-10-19T00:00:00Z</published>
+    <updated>2016-10-19T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="OpenCV4Android" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/opencv-android.html" />
+        <title>OpenCV4Android</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>OpenCV4Android</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Oct 19, 2016</div>
+
+         
+
+         
+            <div><a href="../tags/posts/opencv.html">opencv</a>, <a href="../tags/posts/android.html">android</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12"><p>Looks like I’m going to have to work with OpenCV and android a lot in the near future. Though documentation seems okay, I’ve run into multiple instances of having to google the same thing over and over again and have finally decided to compile everything in this post, which will be expanded and updated as I hit, and clear roadblocks.</p>
+<div class="figure">
+<img src="http://imgs.xkcd.com/comics/wisdom_of_the_ancients.png" alt="Motivation - xkcd: Wisdom of the Ancients" />
+<p class="caption">Motivation - xkcd: Wisdom of the Ancients</p>
+</div>
+<h2 id="setup">Setup</h2>
+<ol style="list-style-type: decimal">
+<li><a href="http://stackoverflow.com/questions/27406303/opencv-in-android-studio">OpenCV in Android Studio</a></li>
+<li><a href="http://stackoverflow.com/a/22072984">SourceSets for jniLibs</a>: To be used when the debug log says library not found.</li>
+<li><a href="http://answers.opencv.org/question/10175/async-initialization-of-opencv-on-android-using-opencvmanager/">Initialization</a></li>
+</ol>
+<h2 id="resources">Resources</h2>
+<ol style="list-style-type: decimal">
+<li><a href="http://developer.sonymobile.com/knowledge-base/tutorials/android_tutorial/get-started-with-opencv-on-android/">Get started with OpenCV on Android</a>: Camera Capture, some image processing and conversion utility examples.</li>
+<li><a href="http://docs.opencv.org/java/3.1.0/">OpenCV Java API</a>: Official Documentation</li>
+<li><a href="http://stackoverflow.com/questions/8287949/android-how-to-draw-a-smooth-line-following-your-finger">Drawing a line on custom view canvas</a>: Contains solutions for cubic splines and stuff, to make the path look smooth.</li>
+<li><a href="http://docs.opencv.org/2.4/doc/tutorials/introduction/android_binary_package/dev_with_OCV_on_Android.html#native-c">OpenCV Native Calls</a></li>
+<li><a href="http://stackoverflow.com/questions/9935618/returning-mat-object-from-native-code-to-java-in-opencv">Returning Mat Object</a></li>
+</ol>
+<h2 id="jni">JNI</h2></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
+    <title>GSoC Final Report</title>
+    <link href="http://jerinphilip.github.io/posts/gsoc-final-report.html" />
+    <id>http://jerinphilip.github.io/posts/gsoc-final-report.html</id>
+    <published>2016-08-22T00:00:00Z</published>
+    <updated>2016-08-22T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="GSoC Final Report" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/gsoc-final-report.html" />
+        <title>GSoC Final Report</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>GSoC Final Report</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Aug 22, 2016</div>
+
+         
+            <div>By Jerin Philip</div>
+         
+
+         
+            <div><a href="../tags/posts/gsoc.html">gsoc</a>, <a href="../tags/posts/libindic.html">libindic</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12"><h2 id="sandhi-splitter">sandhi-splitter</h2>
+<p>This module was written from scratch and efficiently detects constituent words from a given agglutinated word. The identification part is done agnostic to the language, while splitting and joining are currently rule based.</p>
+<p>The module is hosted at <a href="https://github.com/libindic/sandhi-splitter/commits?author=jerinphilip">libindic/sandhi-splitter</a>.</p>
+<p>Documentation with examples of training, testing and using the API provided is currently hosted using gh-pages, and is available <a href="https://jerinphilip.github.io/sandhi-splitter">here</a>.</p>
+<h3 id="applications">Applications</h3>
+<ul>
+<li>Enhance the root word corpus</li>
+<li>Improve spellchecker, discussed below.</li>
+</ul>
+<h2 id="spellchecker-enhanced">spellchecker, enhanced</h2>
+<p>Next proposed addition was enhancing the spellchecker with sandhi-splitter.</p>
+<p>The implementation inherits from the existing Malayalam spellchecker, which was improved to handle inflections by Balasankar C, and with sandhi-splitter improves the results further.</p>
+<p>The pull request corresponding to this can be found <a href="https://github.com/libindic/spellchecker/pull/8">here</a>.</p>
+<h2 id="rest-api-for-libindic">REST API for libindic</h2>
+<p>WSME was used to provide REST services of libindic modules. This is interfaced as a modular application through flask blueprints, on the main libindic application.</p>
+<ul>
+<li><a href="https://github.com/libindic/Silpa-Flask/pull/31">Silpa-Flask: REST API</a></li>
+<li><a href="https://github.com/libindic/ucasort/pull/1">ucasort: WSME</a></li>
+<li><a href="https://github.com/libindic/chardetails/pull/1">chardetails: WSME</a></li>
+<li><a href="https://github.com/libindic/normalizer/pull/7">normalizer: WSME + py3 fixes</a></li>
+<li><a href="https://github.com/libindic/text-similarity/pull/1">textsimilarity: WSME</a></li>
+<li><a href="https://github.com/libindic/payyans/pull/4">payyans: WSME</a></li>
+<li><a href="https://github.com/libindic/soundex/pull/16">soundex: WSME</a></li>
+<li><a href="https://github.com/libindic/inexactsearch/pull/2">inexactsearch: WSME</a></li>
+<li><a href="https://github.com/libindic/katapayadi/pull/1">katapayadi: WSME</a></li>
+<li><a href="https://github.com/libindic/indicfortune/pull/2">indicfortune: WSME</a></li>
+</ul>
+<h2 id="links">Links</h2>
+<ul>
+<li><a href="https://discourse.indicproject.org/t/libindic-improvements/38">Indic Project Discourse</a></li>
+<li><a href="https://docs.google.com/document/d/1ZDBNKa27G9CGA1QRwtQNmEcvnvQORy02XNhfE-eJt7w/edit?usp=sharing">Original Proposal</a></li>
+</ul></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+
+</feed>
