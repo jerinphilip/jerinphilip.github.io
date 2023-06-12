@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Force integrated graphics" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/always-egpu.html" />
+        <title>Force integrated graphics</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Force integrated graphics</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jun 12, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/archlinux.html">archlinux</a>, <a href="../tags/posts/graphics.html">graphics</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12"><p>As of now, applications which use graphics tend to use NVIDIA.</p>
+<details> <summary> <code>$ nvidia-smi </code> </summary>
+<pre>
+Mon Jun 12 14:26:03 2023       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 530.41.03              Driver Version: 530.41.03    CUDA Version: 12.1     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                  Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf            Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA GeForce RTX 3060         Off| 00000000:01:00.0  On |                  N/A |
+|  0%   40C    P8               12W / 170W|   1284MiB / 12288MiB |     11%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|    0   N/A  N/A      1299      G   /usr/lib/Xorg                               523MiB |
+|    0   N/A  N/A      1391      G   /usr/bin/gnome-shell                        108MiB |
+|    0   N/A  N/A      1592      G   /usr/bin/gnome-software                      20MiB |
+|    0   N/A  N/A      1817      G   /usr/lib/xdg-desktop-portal-gnome            69MiB |
+|    0   N/A  N/A      2794      G   /usr/bin/kitty                                3MiB |
+|    0   N/A  N/A      8396    C+G   ...4175876,13528862819532032333,262144      552MiB |
++---------------------------------------------------------------------------------------+`
+
+</pre>
+<p></details></p>
+<p>I was thinking of a use-case to always allocate the GPU VRAM to Machine Learning models. This should be possible, but weird. Given recent uptick in deep-learning queries on the internet, someone or the other should have run into the same problem.</p>
+<p>On looking for an adaptation of <a href="https://gist.github.com/wangruohui/bc7b9f424e3d5deb0c0b8bba990b1bc5">an ubuntu script</a> for <a href="../posts/buildapc.html">the newly installed ArchLinux</a>, I received the following pointers from the <a href="https://app.element.io/#/room/#archlinux:archlinux.org">matrix channel</a>:</p>
+<ol style="list-style-type: decimal">
+<li><a href="https://aur.archlinux.org/packages/hyprland-nvidia">hyprland-nvidia</a></li>
+<li><a href="https://www.reddit.com/r/linux_gaming/comments/vh0f03/possible_to_use_intel_igpu_on_wayland_but_nvidia/">r/linux_gaming/…/possible_to_use_intel_igpu_on_wayland_but_nvidia</a></li>
+<li><a href="https://github.com/ewagner12/all-ways-egpu">gh/ewagner12/all-ways-egpu</a></li>
+</ol>
+<p>I haven’t yet felt the need to do walk this path for now. This post will be updated with the details if I get to execution. For now, this will remain a link stash.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
