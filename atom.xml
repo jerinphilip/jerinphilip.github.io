@@ -8,8 +8,228 @@
         <name>Jerin Philip</name>
         <email>jerinphilip@live.in</email>
     </author>
-    <updated>2022-03-19T00:00:00Z</updated>
+    <updated>2023-06-10T00:00:00Z</updated>
     <entry>
+    <title>Building a PC</title>
+    <link href="http://jerinphilip.github.io/posts/pcbuild.html" />
+    <id>http://jerinphilip.github.io/posts/pcbuild.html</id>
+    <published>2023-06-10T00:00:00Z</published>
+    <updated>2023-06-10T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Building a PC" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/pcbuild.html" />
+        <title>Building a PC</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Building a PC</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jun 10, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/build.html">build</a>, <a href="../tags/posts/hardware.html">hardware</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-sm-12"><p>I got my first PC sometime in 2004. It had a CRT Monitor, 256MB DDR1 RAM, Pentium IV Processor. I don’t remember how much storage the machine had, but it sure was a mechanical hard-drive. I didn’t even know what a computer was back then, my dad must’ve been a visionary who got me one in my remote corner of the world. This machine was the beginning of the path that led me into programming and computer science.</p>
+<p>I’ve been wanting to build my own machine a while, but been procrastinating it for long. Come to think of it, what held me back was the lack of stability over the past few years. I was graduating, moving countries, being on visa. If I had to uproot my life again quickly, the overhead of moving PC components would be an added woe.</p>
+<p>2 decades and 3 computers later, I have managed to end up with some time to myself, and some stability back home. Some things were already in place. Last May when I came to India, I purchased and assembled a <a href="https://www.amazon.in/TEKAVO-computer-Computer-Workstation-Reversible/dp/B09B6DQYXH">nice table</a> that could support the build. A basic <a href="https://www.amazon.in/Featherlite-Ergonomic-Adjustable-Support-Armrest/dp/B09DNZPTJ8">featherlite chair</a> was also purchased and kept, and I have an extra from my Bangalore setup.</p>
+<p>The first-laptop I got for college is still lying around in my room, waiting for some restoration. The ThinkPad X1C7 I upgraded to is what I’m writing this post from. The laptop is a super-portable machine, but it just wasn’t cutting it for certain heavy compile and some light ML training workloads I want to take on.</p>
+<h2 id="build">Build</h2>
+<p>The machine I want is something that supports a lot of heavy-compilations and some prototyping on the GPU. As of now, I do not want to do training workloads. For a usable model, this should require heavier GPUs and more power-draw. My short term interests are only to learn GPU/CUDA Programming using the new toy. My experience with compile jobs are <code>make -j</code> likes more workers (CPU cores) and more memory (RAM).</p>
+<p>My good-friend Amaljith has been tolerating my chatterbox on a vision to build a PC maxing out every component for years now. Having built a gaming PC for himself already, I consider him an expert in the field, even more so than me. In theory I should know better because of my computer science background and sysadmin work, but I’ve been busy with other stuff. The original build had multiple 4090s planned, but for all the cheap talk I did and how I scaled it down so much, I think he reserves every right to shame for life. Our good-friend Aurobindo also offered help and some inputs.</p>
+<p>Once the decision to buy was in-place and use-cases were covered where thought about, components got decided fast. The final list of components are below:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Model</th>
+<th>Specs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Processor</td>
+<td>AMD Ryzen 9 7950X</td>
+<td>4.5GHz, 16 cores x 2 threads</td>
+</tr>
+<tr class="even">
+<td>Motherboard</td>
+<td>MSI Pro X670-P Wifi</td>
+<td>X670</td>
+</tr>
+<tr class="odd">
+<td>RAM</td>
+<td>Crucial CT32G48C40U5</td>
+<td>64GB (32GBx2) DDR5 4800MHz</td>
+</tr>
+<tr class="even">
+<td>SSD</td>
+<td>Kingston NVME INTERNAL SSD (SNV2S/1000G)</td>
+<td>1TB NV2 M.2 2280 PCIE 4.0</td>
+</tr>
+<tr class="odd">
+<td>GPU</td>
+<td>INNO3D GeForce RTX 3060</td>
+<td>12GB VRAM</td>
+</tr>
+<tr class="even">
+<td>CPU Cabinet</td>
+<td>Corsair 4000D Black</td>
+<td>Mid-Tower</td>
+</tr>
+<tr class="odd">
+<td>CPU Cooler</td>
+<td>Noctua NH-D15S Chromax Black</td>
+<td>Air Cooler, Silent</td>
+</tr>
+<tr class="even">
+<td>PSU</td>
+<td>EVGA SuperNOVA 1000 GT</td>
+<td>1000W 80+ Gold Fully Modular</td>
+</tr>
+<tr class="odd">
+<td>Monitor</td>
+<td>Samsung LU32J590UQW</td>
+<td>80.1cm (31.5“) UHD 4k QLED</td>
+</tr>
+<tr class="even">
+<td>Keyboard</td>
+<td>Anne Pro 2</td>
+<td>Bluetooth 60%</td>
+</tr>
+<tr class="odd">
+<td>Mouse</td>
+<td>Logitech M185</td>
+<td>Wireless</td>
+</tr>
+</tbody>
+</table>
+<p>I do not think the build is particulary fancy, I cheaped out on plenty of components. The power-supply is an overkill (1000W), but let’s hope I can sneak in a few more GPUs and other enhancements in the future. This is perhaps far-fetched, but if a mistake, this is not too costly.</p>
+<p>I did not purchase a UPS. My home has a UPS Inverter + Battery already installed that powers a whole lot of devices. Back when it was being setup, I made sure the sockets in the intended office room had power delivered via the inverter. After some correspondence with the local technician who maintains the setup and expected power-draw from my machine, we concluded the inverter is enough, no need for an additional UPS.</p>
+<h2 id="procurement">Procurement</h2>
+<p>Edinburgh spoiled me with 4K screens, so I had already got one when I joined a new job in Bengaluru (sometime in August 2022). The Anne Pro 2 was purchased while in Edinburgh (circa October 2020). Mouse was a random purchase while in Edinburgh, don’t exactly remember when.</p>
+<p>I had to buy the rest, and also ensure these got delivered to the middle-of-nowhere. I used <a href="pcpricetracker.in" class="uri">pcpricetracker.in</a> to scout cheapest vendors to procure my required components from. Most of the argmin on price on my requirements came from <a href="https://www.vedantcomputers.com/">Vedant Computers</a>. There were a few that were cheaper on other websites, but in some cases a delivery/credit-card surcharge offset it. In the end I purchased the RAM from <a href="https://www.theitdepot.com/">ITDepot</a>, PSU from <a href="www.pcstudio.in">PCStudio</a>.</p>
+<p>I ordered the cabinet first to test delivery. Turns out it was sent via Delhivery and I had <a href="https://twitter.com/jerinphilip_/status/1664470235305459713">troubles getting it in time</a>. I didn’t wait, and went ahead and ordered all remaining components on June 01, 2023 - expecting to assemble as soon as possible. Delhivery held my cabinet package for nearly a week more than the expected time, at which point all components had arrived at the final-delivery hub. I somehow troubled customer care to the point they told me the (wrong) address to the final delivery center, which turned out to be a drive away. After clicking buttons on the delhiver portal I found the hub and picked up 3 packages that had arrived via Delhivery. RAM was shipped via Amazon Shipping, it took another day to arrive.</p>
+<p>Around June 08, I had all required components, and was ready to assemble. I made unboxing videos. These were required in case I wanted to return and get a replacement within the stipulated time.</p>
+<h2 id="assembly">Assembly</h2>
+<p>In the past I have opened up more expensive server-equipment and maintained them - swapped out a few components. I have never before assembled a PC on my own. Given there were fragile components of high value, this endeavour had me worried.</p>
+<p>I only watched a few component specific videos. In general, I consume text faster than videos and drawn out assembly videos are painful. I was aware I could mess-up the CPU were I not delicate from browsing forums like <a href="https://www.reddit.com/r/buildapc/">r/buildapc</a> and reading the wiki. I found the text-guides in <a href="reddit.com/r/buildapc/wiki/beginnersguide">Beginners Guide</a> particularly useful.</p>
+<p>I had a sense of direction inside my head - put CPU in, plant CPU cooler on top. Insert RAM - I had done this before and is easy. Insert NVME SSD on M.2. This was new, I had to watch a few videos. If I connect this to the Front Panel controls and the power-supply I could boot into BIOS if all worked out. This meant I kept the GPU and a spare RAM aside, in case I fried the components by wrong connections. I also didn’t connect the body fans in the beginning, just the CPU Cooler Fan was connected.</p>
+<p>The power-supply had asymmetric tabs on both ends. When they were symmetric - it meant both sides were compatible. This helped my fear of blowing up any parts connecting the wires wrong. It was mentioned somewhere in the forums such a component frying possibility existed.</p>
+<p>I found connecting the CPU power-supply socket on the motherboard to the power-supply cables more difficult than expected. Once the motherboard was screwed in to the case, the connector was in a corner I could not reach easily. To get around this, I had to remove the motherboard and insert cable, then put it back in. Given a heavy cooler, this risked bending motherboard, I realized quickly.</p>
+<p>Another hiccup along the route was that the power-supply, since it was rated 1000W came with a power-socket male plug (16A). However, all sockets in the room where the machine is intended to be kept is 6A normal plug. Since this is India and <em>jugaad</em> runs in the blood, I went to the local electrical shop and got a 6A to 16A adapter. I think this would be unavailable due to safety rules in western countries I have stayed before.</p>
+<p>To kill a few more birds with one stone of a town-visit, I bought small stuff that could improve quality-of-life. These included small zip-lock bags to keep the leftover screws and that sort, one transparent box to keep all of these in, price tag stickers which I will repurpose as labels for screws.</p>
+<h2 id="software">Software</h2>
+<p>Software is what I’m good at.</p>
+<p>There was a plan of doing some mild-gaming on this machine - it’s capable of gaming after all. However, I got fronted with an install driver window when attempting to install Windows 11. After reading a few forums and getting reminders of what kind of a debugging/fixing hell windows was, I decided to chuck Windows ideas and go only Linux.</p>
+<p>I proceeded to install my favourite distro - ArchLinux. I have to do some deep-learning work. Ubuntu could’ve been a sensible choice considering support. But I felt confident enough to make do the same stuff with ArchLinux.</p>
+<pre>
+<span style="font-weight:bold;color:blue;">
+               +                OS:</span> Arch Linux x86_64
+<span style="font-weight:bold;color:blue;">               #                Hostname:</span> vty
+<span style="font-weight:bold;color:blue;">              ###               Kernel Release:</span> 6.3.6-arch1-1
+<span style="font-weight:bold;color:blue;">             #####              Uptime:</span> 1 day, 19:53
+<span style="font-weight:bold;color:blue;">             ######             WM:</span> None
+<span style="font-weight:bold;color:blue;">            ; #####;            DE:</span> GNOME
+<span style="font-weight:bold;color:blue;">           +##.#####            Packages:</span> 1108
+<span style="font-weight:bold;color:blue;">          +##########           RAM:</span> <span style="color:blue;"></span><span style="font-weight:bold;color:green;">8326 MB</span> / 63450 MB
+<span style="font-weight:bold;color:blue;">         ######</span><span style="color:blue;">#####</span><span style="font-weight:bold;color:blue;">##;         Processor Type:</span> AMD Ryzen 9 7950X 16-Core Processor
+<span style="font-weight:bold;color:blue;">        ###</span><span style="color:blue;">############</span><span style="font-weight:bold;color:blue;">+        $EDITOR:</span> vim
+<span style="font-weight:bold;color:blue;">       #</span><span style="color:blue;">######   #######        </span><span style="font-weight:bold;color:blue;">Root:</span> <span style="color:blue;"></span><span style="font-weight:bold;color:green;">217G</span> / 916G (23%) (ext4)
+<span style="color:blue;">     .######;     ;###;`&quot;.      
+    .#######;     ;#####.       
+    #########.   .########`     
+   ######'           '######    
+  ;####                 ####;   
+  ##'                     '##   
+ #'                         `#  
+</span>
+</pre>
+<p>A four-years ago me would’ve went ahead and configured every detail, but I got no time for that much these days. Just installed GNOME on the base system, defaults are nice. I’ll switch to a tiling WM if the workflow necessitates it at some point in the future.</p>
+<p>I expected GNOME would come with <code>network-manager</code>, but turned out it did not. So I had to boot into the live-disk again, setup internet, <code>arch-chroot</code> and then install <code>networkmanager</code>. I have made this mistake before, but some things you keep doing again and again.</p>
+<p>I encountered a few more issues at configuring the graphics card with the proprietary driver. Turns out <code>wayland</code>, <code>sway</code> etc does not play nice with the proprietary driver. But I need the driver for CUDA programming.</p>
+<h2 id="afterthoughts">Afterthoughts</h2>
+<p>I see value in adding more RAM. I tried to do <code>make -j</code> on some LLVM source code and the compile OOM-ed out at some point (or so I think). Motherboard supports a maximum of 128GB. I definitely made a bad bet on storage. I am better off with a 2TB SSD, and more SATA HDDs to store lazy stuff like movies, music and that sort. I downloaded a few machine-learning models and datasets and I’m already at some 200GB (see <code>archey3</code> output somewhere above). Good thing about a PC Build is I can add more parts to upgrade. So when I have funds, and if the stay at home sticks I’ll incrementally upgrade the machine.</p>
+<p>The old 2004 PC once had a lizard crawl into the power-supply and create a short-circuit. Scared the hell out of me, all the explosions back then. I thought I destroyed the entire computer gaming. The Corsair 4000D’s orifices to allow ventilation allows certain insects, so I slightly worry about possible pest attacks. One of the tradeoff of living in the middle of beautiful lush green.</p>
+<p>There’s a looming concern of how much longer I’d be able to play with this new toy. At some point, I’ll have to look out for a job. From the direction the sentiment towards work from home is moving, chances are I will need to move.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
     <title>Speeding up builds with ccache</title>
     <link href="http://jerinphilip.github.io/posts/ccache.html" />
     <id>http://jerinphilip.github.io/posts/ccache.html</id>
@@ -2727,138 +2947,6 @@ plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span cl
 <li><a href="http://stackoverflow.com/questions/9935618/returning-mat-object-from-native-code-to-java-in-opencv">Returning Mat Object</a></li>
 </ol>
 <h2 id="jni">JNI</h2></div>
-</div>
-
-
-<div class="row">
-    <div class="col">
-        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
-    </div>
-</div>
-
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        
-<footer>
-    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
-</footer>
-
-                    </div>
-                </div>
-            </div>
-        <script type="text/javascript" src="../static/js/init.js"></script>
-    </body>
-</html>
-]]></summary>
-</entry>
-<entry>
-    <title>GSoC Final Report</title>
-    <link href="http://jerinphilip.github.io/posts/gsoc-final-report.html" />
-    <id>http://jerinphilip.github.io/posts/gsoc-final-report.html</id>
-    <published>2016-08-22T00:00:00Z</published>
-    <updated>2016-08-22T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta property="og:title" content="GSoC Final Report" />
-        <meta property="og:url" content="http://jerinphilip.github.io/posts/gsoc-final-report.html" />
-        <title>GSoC Final Report</title>
-        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
-        <link rel="stylesheet" href="../static/css/tether.min.css" />
-        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="../static/css/custom.css" />
-        <link rel="stylesheet" href="../static/css/kate.css" />
-        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
-        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
-        <script type="text/javascript" src="../static/js/tether.min.js"></script>
-        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
-        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
-        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
-        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-		<!-- Global site tag (gtag.js) - Google Analytics -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
-		<script>
-		  window.dataLayer = window.dataLayer || [];
-		  function gtag(){dataLayer.push(arguments);}
-		  gtag('js', new Date());
-
-		  gtag('config', 'UA-122834696-1');
-		</script>
-    </head>
-    <body>
-            <div class="container">
-                <div class="row">
-                    <div class="col">
-                        <header>
-    <span><a href="../">/home/jerin</a> </span>
-    <!--
-    <span><a href="/archive.html">posts</a></span>,
-    <span><a href="/contact.html">contact</a></span>
-    -->
-</header>
-
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <h1>GSoC Final Report</h1>
-                        <div class="row mb-4">
-    <div class="post-info col">
-        <div>Aug 22, 2016</div>
-
-         
-            <div>By Jerin Philip</div>
-         
-
-         
-            <div><a href="../tags/posts/gsoc.html">gsoc</a>, <a href="../tags/posts/libindic.html">libindic</a></div>
-         
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-8 col-sm-12"><h2 id="sandhi-splitter">sandhi-splitter</h2>
-<p>This module was written from scratch and efficiently detects constituent words from a given agglutinated word. The identification part is done agnostic to the language, while splitting and joining are currently rule based.</p>
-<p>The module is hosted at <a href="https://github.com/libindic/sandhi-splitter/commits?author=jerinphilip">libindic/sandhi-splitter</a>.</p>
-<p>Documentation with examples of training, testing and using the API provided is currently hosted using gh-pages, and is available <a href="https://jerinphilip.github.io/sandhi-splitter">here</a>.</p>
-<h3 id="applications">Applications</h3>
-<ul>
-<li>Enhance the root word corpus</li>
-<li>Improve spellchecker, discussed below.</li>
-</ul>
-<h2 id="spellchecker-enhanced">spellchecker, enhanced</h2>
-<p>Next proposed addition was enhancing the spellchecker with sandhi-splitter.</p>
-<p>The implementation inherits from the existing Malayalam spellchecker, which was improved to handle inflections by Balasankar C, and with sandhi-splitter improves the results further.</p>
-<p>The pull request corresponding to this can be found <a href="https://github.com/libindic/spellchecker/pull/8">here</a>.</p>
-<h2 id="rest-api-for-libindic">REST API for libindic</h2>
-<p>WSME was used to provide REST services of libindic modules. This is interfaced as a modular application through flask blueprints, on the main libindic application.</p>
-<ul>
-<li><a href="https://github.com/libindic/Silpa-Flask/pull/31">Silpa-Flask: REST API</a></li>
-<li><a href="https://github.com/libindic/ucasort/pull/1">ucasort: WSME</a></li>
-<li><a href="https://github.com/libindic/chardetails/pull/1">chardetails: WSME</a></li>
-<li><a href="https://github.com/libindic/normalizer/pull/7">normalizer: WSME + py3 fixes</a></li>
-<li><a href="https://github.com/libindic/text-similarity/pull/1">textsimilarity: WSME</a></li>
-<li><a href="https://github.com/libindic/payyans/pull/4">payyans: WSME</a></li>
-<li><a href="https://github.com/libindic/soundex/pull/16">soundex: WSME</a></li>
-<li><a href="https://github.com/libindic/inexactsearch/pull/2">inexactsearch: WSME</a></li>
-<li><a href="https://github.com/libindic/katapayadi/pull/1">katapayadi: WSME</a></li>
-<li><a href="https://github.com/libindic/indicfortune/pull/2">indicfortune: WSME</a></li>
-</ul>
-<h2 id="links">Links</h2>
-<ul>
-<li><a href="https://discourse.indicproject.org/t/libindic-improvements/38">Indic Project Discourse</a></li>
-<li><a href="https://docs.google.com/document/d/1ZDBNKa27G9CGA1QRwtQNmEcvnvQORy02XNhfE-eJt7w/edit?usp=sharing">Original Proposal</a></li>
-</ul></div>
 </div>
 
 
