@@ -57,7 +57,7 @@
          
 
          
-            <div><a href="../tags/posts/archlinux.html">archlinux</a>, <a href="../tags/posts/graphics.html">graphics</a></div>
+            <div><a href="../tags/posts/arch.html">arch</a>, <a href="../tags/posts/linux.html">linux</a>, <a href="../tags/posts/graphics.html">graphics</a></div>
          
     </div>
 </div>
@@ -101,7 +101,14 @@ Mon Jun 12 14:26:03 2023
 <li><a href="https://www.reddit.com/r/linux_gaming/comments/vh0f03/possible_to_use_intel_igpu_on_wayland_but_nvidia/">r/linux_gaming/…/possible_to_use_intel_igpu_on_wayland_but_nvidia</a></li>
 <li><a href="https://github.com/ewagner12/all-ways-egpu">gh/ewagner12/all-ways-egpu</a></li>
 </ol>
-<p>I haven’t yet felt the need to do walk this path for now. This post will be updated with the details if I get to execution. For now, this will remain a link stash.</p></div>
+<p>I haven’t yet felt the need to do walk this path for now. This post will be updated with the details if I get to execution. For now, this will remain a link stash.</p>
+<h2 id="workaround">Workaround</h2>
+<p>Coincidental, but relative of mine needed more VRAM space for ML experiments (they’re all the rage it seems, I figure). Between our discussions, the following workaround is nice if you have a second machine and can use the GPU machine as a headless one without display.</p>
+<p>It’s possible to reconnect to the motherboard display-port/HDMI to use the integrated graphics, and disable display. This allows NVIDIA driver to work, while display rendering does not use the GPU and the VRAM remains available.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">systemctl</span> disable gdm --now </code></pre></div>
+<p>To revert, it’s always possible to use:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">systemctl</span> enable gdm --now </code></pre></div>
+<p>Since I still have my ThinkPad X1C, I think I should be able to use the method if it comes to that. The above assumes GNOME is the default. It is the case for me and the person I’m corresponding with.</p></div>
 </div>
 
 
