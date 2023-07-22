@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Notes on Cross-Entropy in autograd" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/cross-entropy-derivative.html" />
+        <title>Notes on Cross-Entropy in autograd</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Notes on Cross-Entropy in autograd</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jul 22, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/ml.html">ml</a>, <a href="../tags/posts/autograd.html">autograd</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#notations">Notations</a></li>
+<li><a href="#cross-entropy">Cross Entropy</a><ul>
+<li><a href="#derivative">Derivative</a></li>
+</ul></li>
+<li><a href="#matrix-and-vector-notations">Matrix and vector notations</a></li>
+<li><a href="#numerical-stability">Numerical Stability</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>The cross-entropy loss is a commonly used loss-function in neural-network training. One of the key pieces of building an autograd is writing functions that know how to do derivatives of output w.r.t inputs (See minitorch’s <a href="https://minitorch.github.io/module1/chainrule/">backward</a>). There are already a number of good articles on the web on how to derive this for cross-entropy loss, this one is just me working this out all over again and leaving a note to my future self.</p>
+<h1 id="notations">Notations</h1>
+<p>This article considers the scenario where there are <span class="math inline">\(d\)</span> output classes. A neural network or something generates <span class="math inline">\(d\)</span> dimensional logits at the output layer, on which the softmax activation is applied to generate probabilities.</p>
+<p>In the derivations ahead, I will use the following notations at times to simplify writing. The softmax function is denoted by <span class="math inline">\(\mathbf{\sigma}(\mathbf{x}): \mathbb{R}^d \rightarrow \mathbb{R}^d\)</span> for <span class="math inline">\(\mathbf{x} \in \mathbb{R}^d\)</span>. Softmax converts logits <span class="math inline">\(x_i\)</span> to probabilities <span class="math inline">\(p_i\)</span>.</p>
+<span class="math display">\[\begin{align*}
+    \mathbf{\sigma}(\mathbf{x}) &amp;= \{ p_i \}_{i=1}^{d} \\
+    p_i &amp;= \dfrac{e^{x_i}}{\sum_{j=0}^{d}{e^{x_j}}}
+\end{align*}\]</span>
+<h1 id="cross-entropy">Cross Entropy</h1>
+<p>The cross-entropy loss for multi-class classification is formulated as follows, applying a few more operations on the output of softmax:</p>
+<span class="math display">\[\begin{align*}
+    \mathrm{CE}(\mathbf{x}, \mathbf{y}) 
+                    &amp;= - \sum_{i}^{d}{y_i \log p_i} \\
+                    &amp;= -\left[ y_c \log p_c  + \sum_{ i=0, i\neq c}^{d}{y_i \log p_i} \right]\\
+                    &amp; = -y_c \log p_c \\
+                    &amp;= - y_c \log \left(\dfrac{e^{x_c}}{\sum_{j=0}^{d}{e^{x_j}}}\right) \\
+\end{align*}\]</span>
+<h2 id="derivative">Derivative</h2>
+<p>The partial derivative w.r.t a component of <span class="math inline">\(\mathbf{x}\)</span> represented by <span class="math inline">\(x_k\)</span> can be computed as below. <span class="math inline">\(p_c\)</span> and <span class="math inline">\(y_c\)</span> denotes the probability predicted and the label respectively of the label (<span class="math inline">\(c\)</span>). By design, it holds <span class="math inline">\(y_c = 1\)</span> since it’s for the true label/class, but is denoted as <span class="math inline">\(y_c\)</span> for better readability in text here.</p>
+<span class="math display">\[\begin{align*}
+    \dfrac{\partial\mathrm{CE}(\mathbf{x}, \mathbf{y})}{\partial{x_k}} 
+       &amp;= - y_c \dfrac{\partial{\log p_c }}{x_k} \\
+       &amp;= - y_c \left(\dfrac{\partial{\log p_c }}{\partial p_c}\right) \left(\dfrac{\partial p_c }{ \partial x_k}\right) \\
+        &amp;= - y_c \left(\dfrac{1}{p_c}\right) \left(\dfrac{\partial p_c}{\partial x_k}\right) \\
+       % &amp;= - y_c \dfrac{1}{p_i} p_i \cdot (1 - p_j) \\
+       % &amp;= - \sum_{i=1}^{N}{y_i \cdot (1 - p_j)} \\
+    \end{align*}\]</span>
+<p>Next is expanding <span class="math inline">\(\partial pc/\partial x_k\)</span>. It is worthwhile to note that <span class="math inline">\(p_c\)</span> is the output of the softmax function - so, we also happen to be computing the derivative of softmax function on vector inputs here.</p>
+<p>There are two cases for the derivative, for when <span class="math inline">\(k = c\)</span> and <span class="math inline">\(k \neq c\)</span>. This is because in one case the numerator has to be considered as a variable requiring the application of the product / quotient rule for derivatives and in the other the numerator can be considered a constant.</p>
+<p>For the case when <span class="math inline">\(k = c\)</span>, we have on applying the product rule:</p>
+<span class="math display">\[\begin{align*}
+    \dfrac{\partial p_c}{\partial x_c} &amp;= e^{x_c} \dfrac{-1}{\left(\sum_{j=0}^{d}{e^{x_j}}\right)^2} \cdot e^{x_c} + e^{x_{c}} \left(\dfrac{1}{\sum_{j=0}^{d}{e^{x_c}}}\right) \\
+    &amp;= \dfrac{e^{x_c}}{\left(\sum_{j=0}^{d}{e^{x_j}}\right)} \left[ 1 - \dfrac{e^{x_c}}{\left(\sum_{j=0}^{d}{e^{x_j}}\right)}  \right] \\
+    &amp;= p_c \cdot (1 - p_c) \\
+\end{align*}\]</span>
+<p>In the case when <span class="math inline">\(k \neq c\)</span> we obtain:</p>
+<span class="math display">\[\begin{align*}
+    \dfrac{\partial p_c}{\partial x_k} &amp;={e^{x_c}} \cdot \dfrac{-1}{\left(\sum_{j=0}^{d}{e^{x_j}}\right)^2} \cdot e^{x_k} \\
+            &amp;= \dfrac{e^{x_c}}{\left(\sum_{j=0}^{d}{e^{x_j}}\right)} \dfrac{-e^{x_k}}{\left(\sum_{j=0}^{d}{e^{x_j}}\right)} \\
+            &amp;= - p_c \cdot p_k
+\end{align*}\]</span>
+<p>We can consolidate the result as:</p>
+<span class="math display">\[\begin{align*}
+ \dfrac{\partial\mathrm{p_c}(\mathbf{x}, \mathbf{y})}{\partial{x_k}} &amp;= \begin{cases}
+    p_c (1 - p_c) &amp; k = c \\
+    - p_c p_k &amp; k \neq c
+\end{cases}
+\end{align*}\]</span>
+<span class="math display">\[\begin{align*}
+ \dfrac{\partial\mathrm{CE}(\mathbf{x}, \mathbf{y})}{\partial{x_k}} &amp;= \begin{cases}
+    (p_k - 1) &amp; k = c \\
+    p_k &amp; k \neq c
+\end{cases}
+\end{align*}\]</span>
+For computational convenience without branching, we can consolidate this further as:
+<span class="math display">\[\begin{align*}
+ \dfrac{\partial\mathrm{CE}(\mathbf{x}, \mathbf{y})}{\partial{x_k}} &amp;= (p_k - \mathbb{I}[k=c])
+\end{align*}\]</span>
+<h1 id="matrix-and-vector-notations">Matrix and vector notations</h1>
+<p>Looking closely, one can observe that derivatives above can be written in a vector/matrix notation. The cross-entropy function is from a vector input to a scalar value (loss). <em>i.e</em>, <span class="math inline">\(\mathrm{CE}: \mathbb{R}^d \rightarrow \mathbb{R}\)</span>. Because of this, the derivative can be represented as a <span class="math inline">\(d \times 1\)</span> matrix, which is only really a vector. In literature this can be denoted by prefixing a <span class="math inline">\(\nabla\)</span>.</p>
+<span class="math display">\[\begin{align*}
+\nabla_{\mathbb{x}}{\mathrm{CE}} &amp;=  \left[ p_k - o_k\right]_{k=1}^{d}, &amp; o_k = \mathbb{I}[k == c]
+\end{align*}\]</span>
+<p>The derivative of the softmax function w.r.t its inputs form a matrix of <span class="math inline">\(d \times d\)</span>, since it is a vector valued function of a vector. <em>i.e</em>, <span class="math inline">\(\mathbb{\sigma}_{\mathbb{x}}: \mathbb{R}^d \rightarrow \mathbb{R}^d\)</span>. The matrix of partial derivatives of one output component w.r.t another input component forms the Jacobian, denoted often by <span class="math inline">\(\mathbf{J}\)</span>. <span class="math inline">\(J\)</span> doesn’t appear much pleasant to unroll here, but from the two-indices in the equation above, it should be evident this forms a matrix.</p>
+<p>This notation is what you’ll find in Eli Bendersky’s <a href="https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/">post</a> and CS224n’s <a href="https://web.stanford.edu/class/cs224n/readings/gradient-notes.pdf">Vectorized Gradients</a>, both of which I found useful. I just preferred at the time of writing this post to do things by hand using even more basic math (the one I learned in school) due to the lack of familiarity with multivariate calculus vocabulary used in places.</p>
+<h1 id="numerical-stability">Numerical Stability</h1>
+<p>While doing the implementation, one has to be mindful of the numerical stability. This is why some computations of the softmax function looks slightly more complicated. Take a look at marian’s <a href="https://github.com/marian-nmt/marian-dev/blob/master/src/tensors/cpu/tensor_operators.cpp#L950-L984">CrossEntropy backward</a>, which computes the probabilities from softmax for the derivative, for example.</p>
+<p>The usual trick applied is to multiply the numerator and denominator in <span class="math inline">\(p_i\)</span> with a constant, making <span class="math inline">\(e^{x}\)</span> more amenable to floating point computations.</p>
+<span class="math display">\[\begin{align*}
+    p_i &amp;= \dfrac{e^{x_i}}{\sum_{j=0}^{d}{e^{x_j}}} 
+        &amp;= \dfrac{e^{x_i}}{\sum_{j=0}^{d}{e^{x_j}}} \times \dfrac{e^{-M}}{e^{-M}} 
+        &amp;= \dfrac{e^{(x_i - M)}}{\sum_{j=0}^{d}{e^{(x_j - M)}}} 
+\end{align*}\]</span>
+<p>If we choose <span class="math inline">\(M\)</span> as follows as the max among <span class="math inline">\(x_i\)</span>, we get less troubles of overflow and the likes:</p>
+<span class="math display">\[\begin{align*}
+M = \max \{ x_i \}
+\end{align*}\]</span>
+<p>My own reference implementation looks something like below:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="dt">void</span> cross_entropy_with_logits_grad(<span class="dt">float</span> *logits, <span class="dt">int</span> *labels,
+                                    <span class="dt">size_t</span> batch_size, <span class="dt">size_t</span> num_classes,
+                                    <span class="dt">float</span> *grad_out) {
+  <span class="cf">for</span> (<span class="dt">size_t</span> i = <span class="dv">0</span>; i &lt; batch_size; i++) {
+    <span class="dt">size_t</span> offset = i * num_classes;
+
+    <span class="dt">float</span> *x = logits + offset;
+    <span class="dt">float</span> *dce = grad_out + offset;
+    <span class="kw">auto</span> label = <span class="kw">static_cast</span>&lt;<span class="dt">size_t</span>&gt;(labels[i]);
+
+    <span class="co">// Find maximum among x-s</span>
+    <span class="dt">float</span> max_value = <span class="bu">std::</span>numeric_limits&lt;<span class="dt">float</span>&gt;::lowest();
+    <span class="cf">for</span> (<span class="dt">size_t</span> j = <span class="dv">0</span>; j &lt; num_classes; j++) {
+      max_value = <span class="bu">std::</span>max&lt;<span class="dt">float</span>&gt;(max_value, x[j]);
+    }
+
+    <span class="co">// Find sumexp after subtracting max-value.</span>
+    <span class="dt">float</span> sumexp = <span class="dv">0</span>;
+    <span class="cf">for</span> (<span class="dt">size_t</span> j = <span class="dv">0</span>; j &lt; num_classes; j++) {
+      sumexp += <span class="bu">std::</span>exp(x[j] - max_value);
+    }
+
+    <span class="co">// Compute gradients using predicted probability.</span>
+    <span class="cf">for</span> (<span class="dt">size_t</span> j = <span class="dv">0</span>; j &lt; num_classes; j++) {
+      <span class="dt">float</span> p = <span class="bu">std::</span>exp(x[j] - max_value) / sumexp;
+      <span class="kw">auto</span> o = <span class="kw">static_cast</span>&lt;<span class="dt">float</span>&gt;(j == label);
+      dce[j] = (p - o);
+    }
+  }
+}
+</code></pre></div>
+<h1 id="references">References</h1>
+<ol style="list-style-type: decimal">
+<li><a href="https://web.stanford.edu/class/cs224n/readings/gradient-notes.pdf">CS224n: Gradient Notes</a></li>
+<li><a href="https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/">Eli Bendersky: The Softmax function and its derivative</a></li>
+<li><a href="https://www.mldawn.com/back-propagation-with-cross-entropy-and-softmax/">MLDawn: Backprop, xent and softmax</a></li>
+</ol></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
