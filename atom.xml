@@ -8,8 +8,386 @@
         <name>Jerin Philip</name>
         <email>jerinphilip@live.in</email>
     </author>
-    <updated>2023-07-22T00:00:00Z</updated>
+    <updated>2023-07-24T00:00:00Z</updated>
     <entry>
+    <title>Alignment manipulations for pivoting in MT</title>
+    <link href="http://jerinphilip.github.io/posts/alignment-manipulations-pivoting-mt.html" />
+    <id>http://jerinphilip.github.io/posts/alignment-manipulations-pivoting-mt.html</id>
+    <published>2023-07-24T00:00:00Z</published>
+    <updated>2023-07-24T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Alignment manipulations for pivoting in MT" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/alignment-manipulations-pivoting-mt.html" />
+        <title>Alignment manipulations for pivoting in MT</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Alignment manipulations for pivoting in MT</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Jul 24, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ml.html">ml</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#attention">Attention</a></li>
+<li><a href="#pivoting">Pivoting</a><ul>
+<li><a href="#same-vocabulary">Same vocabulary</a></li>
+<li><a href="#different-vocabularies">Different vocabularies</a></li>
+</ul></li>
+<li><a href="#validation">Validation</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>While working on <a href="https://github.com/browsermt/bergamot-translator">bergamot-translator</a>, one feature I was tasked with implementing was a translation flow using pivoting. This post is an account of the implementation of the pivoting feature - traversing math I’m to date still not certain of, hacking one thing after another together effectively engineering a feature shipped and running in about <a href="https://addons.mozilla.org/en-US/firefox/addon/firefox-translations/">300k installations</a> now.</p>
+<p>The idea is simple - given a source language <span class="math inline">\(ss\)</span> translate to a target language <span class="math inline">\(tt\)</span>, through a pivot language <span class="math inline">\(pp\)</span>. Given how history put us in an <em>anglocentric</em> position, there happens to be a lot of parallel-data between English and other languages of the world, than between other pairs. Sentence aligned parallel data aligned drives machine-translation and this consequently meant the existence of a lot of <span class="math inline">\(ss \rightarrow en\)</span> models and <span class="math inline">\(en \rightarrow tt\)</span> models. Consequently pivoting through English to obtain <span class="math inline">\(ss \rightarrow tt\)</span> remains a prevalent strategy in the field of machine-translation. At the time, the Bergamot Project stood in agreement with its model inventory.</p>
+<p>The text part of pivoting is straight-forward. However, one critical-piece to keeping a user-facing HTML translation feature functional was obtaining alignments between the source and target properly. Critical, because the HTML translation feature relied on working alignment information to place tags correctly when matching-tokens in source and target moved around. HTML translation feature was ready with vanilla-translation without pivoting and using alignments. For the pivoting case, attention matrices providing alignments for source to pivot and pivot to target was available separately.</p>
+<p>Using these to obtain source to target alignments wasn’t straightforward (at least to me, back then). So I’ve decided this warrants a post, albeit a bit late.</p>
+<h2 id="attention">Attention</h2>
+<!--
+@luong2015effective formulates attention as follows:
+
+\begin{align}
+    \mathbf{a} &= \mathrm{align}(\mathbf{h}_t, \mathbf{h}_s) \\
+               &= \dfrac
+                                {\exp \left(\mathrm{score}\left(\mathbf{h}_t, \mathbf{h}_s\right)\right)}
+                                {\sum_{s'}{\exp\left(\mathrm{score}\left(\mathbf{h}_t, \mathbf{h}_s'\right)\right)}}
+\end{align}
+-->
+<p>Marian, the library bergamot-translator built on top of <a href="https://github.com/marian-nmt/marian-dev/blob/c29cc83dc4d234f0e3a00a46a729053132b408b8/src/models/costs.h#L86">uses this formulation in cross-attention</a> to additionally learn <em>alignments</em> between source and target tokens. During training, a guided alignment loss is added to the objective that uses alignment information as a training signal. A tool matching tokens in source to tokens in target from raw-corpus like <a href="https://github.com/clab/fast_align">fastalign</a> can provide alignments that can be used as ground-truths. At inference, the attention values will predict the expected alignments. Note that this is different from learning to align, the network is forced to learn to align to certain ground truths from alignment data here. More on this process can be found in <span class="citation">Chen et al. (<a href="#ref-chen2016guided">2016</a>)</span>.</p>
+<p>Illustrations visualizing attention are often attached as qualitative samples demonstrating attention’s efficacy. The render below comes from something <a href="https://github.com/jerinphilip/bergamot-translator/pull/88">I repurposed</a> with borrowed source from <a href="https://distill.pub/2016/augmented-rnns/">distill.pub</a>.</p>
+<div class="figure">
+<img src="../static/images/pivoting-de-en.png" alt="Translating German to English: Alignments via attention" />
+<p class="caption">Translating German to English: Alignments via attention</p>
+</div>
+<p>The above illustration also provide hints to underlying data, and data-structures. The initiated should immediately recognize the tokens (on source and target) can be modelled as nodes and the arrows modelled as weighted edges between source and target tokens.</p>
+<p>In code, we have an adjacency-matrix describing the probabilities / scores matching a source-token with a target-token.</p>
+<h2 id="pivoting">Pivoting</h2>
+<p>As mentioned before, the idea is simple - given a source language <span class="math inline">\(ss\)</span> translate to a target language <span class="math inline">\(tt\)</span>, through a pivot language <span class="math inline">\(pp\)</span>. To get a hang of the elements involved in a translation from German to Italian via English as pivot, see illustrations below.</p>
+<div class="figure">
+<img src="../static/images/pivoting-de-en.png" alt="German to English" />
+<p class="caption">German to English</p>
+</div>
+<div class="figure">
+<img src="../static/images/pivoting-en-it.png" alt="English to Italian" />
+<p class="caption">English to Italian</p>
+</div>
+<p>We have two adjacency matrices in-play here, one with scores for source-pivot pair and the other with scores for pivot-target pair. For simplicity’s sake, we’ll first try to come up with a formulation and algorithm for the case when the pivot tokens match (<em>i.e</em> same vocabulary) and matrix multiplication is straighforward.</p>
+<h3 id="same-vocabulary">Same vocabulary</h3>
+<p>Let the tokens involved in pivoting be <span class="math inline">\(S, P, T\)</span> denoting source, pivot and target respectively.</p>
+<span class="math display">\[\begin{align*}
+    S = \{s_i\} &amp;= \{s_1, s_2, \dots \} \\
+    P = \{q_j\} &amp;= \{q_1, q_2, \dots \} \\
+    T = \{t_k\} &amp;= \{t_1, t_2, \dots \} 
+\end{align*}\]</span>
+<p>These tokens do not necessarily correspond to the notion of <em>words</em>. Note that I am using <span class="math inline">\(q_j\)</span> to represent the pivot sequence <span class="math inline">\(P\)</span> so as to not confuse with probabilities used in this document, denoted by <span class="math inline">\(p(\cdot)\)</span>.</p>
+<p>From alignments coming out of the decoding pipeline, we obtain a probability for each source-token <span class="math inline">\(s_i\)</span> over the target token <span class="math inline">\(t_j\)</span>. We will use <span class="math inline">\(p(s_i | t_j)\)</span> to denote this in this post. For each target-token <span class="math inline">\(t_j\)</span> we have a probability distribution spread over source-tokens <span class="math inline">\(S\)</span>.</p>
+<p>We know the values <span class="math inline">\(p(s_i | q_j)\)</span>, <span class="math inline">\(p(q_j | t_k)\)</span> at inference as some form of attention/alignment from the constituent neural network. I will cook up the math below to get the required <span class="math inline">\(p(s_i | t_k)\)</span>:</p>
+<span class="math display">\[\begin{align}
+p(s_i | t_k)  &amp;= \sum_{j}{p(s_i, q_j| t_k)}  \label{eq:marginalize-pivot} &amp; \text{Marginalization(?)}  \\
+              &amp;= \sum_{j}{{p(s_i| q_j,  t_k) \cdot p(q_i | t_k) }}        &amp; \text{Bayes rule(?)}       \\
+p(s_i | t_k)  &amp;= \sum_{j}{{p(s_i | q_j)\cdot p(q_j | t_k) }}              &amp; \text{Independence(?)}
+\end{align}\]</span>
+<p>In an ideal case, if we assume the pivot tokens constituting the pivot sentence are same, we have a <span class="math inline">\(|S| \times |P|\)</span> matrix and a <span class="math inline">\(|P| \times |T|\)</span> matrix. The above formulation in implementation translates to a matrix multiplication, of matrices containing attention values coming out of the source to pivot and pivot to target translation processes. Not sure if the above math is sound, I’m mostly working backwards from a gut feeling that I have two attention matrices, multiplying them should give me the required probabilities.</p>
+<p>This matrix-multiplication is implemented in bergamot-translator <a href="https://github.com/jerinphilip/bergamot-translator/blob/4fed75af1deb3ede67d9ade0354b87b0806a0ad3/src/translator/response.cpp#L127-L137">here</a>. The implementation makes an additional hop, due to the vocabularies being different. We will discuss this in detail next.</p>
+<h3 id="different-vocabularies">Different vocabularies</h3>
+<p>In reality, it’s not as simple as above. Due to historical reasons, the <span class="math inline">\(ss \rightarrow pp\)</span> and <span class="math inline">\(pp \rightarrow tt\)</span> models happen to be be using different sets of vocabularies. If we take a closer look at the diagrams above, we see <span class="math inline">\(P\)</span> and <span class="math inline">\(P'\)</span> are different. See an extract below. The tokens are space separated.</p>
+<div class="sourceCode">
+<pre class="sourceCode">
+<code class="sourceCode">[S ] Der heutige Artikel in Wikipedia , der freie En zy klo pä die .
+[P ] To day ' s article in Wikipedia , the free en cycl o pedia .
+[P'] Today ' s article in Wikipedia , the free e ncy clo pedia .
+[T ] L ' articolo di oggi su Wikipedia , l ' en ciclo pedia libera .</code>
+</pre>
+</div>
+<p>The previous formulation was convenient in our application of NMT case when the vocabulary used to represent the language <span class="math inline">\(pp\)</span> is consistent giving us <span class="math inline">\(S \leftarrow P\)</span> and <span class="math inline">\(P \leftarrow T\)</span>. To obtain the probabilities in the inconsistent case, we can use the knowledge that vocabularies match at character or byte level. Both vocabularies describe the same underlying text-surface.</p>
+<p>Updating the formulation to include inconsistent pivot vocabularies, we get:</p>
+<span class="math display">\[\begin{align*}
+    S  = \{s_i    \} &amp;= \{s_1, s_2, \dots   \}    \\
+    P  = \{q_j    \} &amp;= \{q_1, q_2, \dots   \}    \\
+    P' = \{q'_{j'}\} &amp;= \{q'_1, q'_2, \dots \}    \\
+    T  = \{t_k    \} &amp;= \{t_1, t_2, \dots   \}    \\
+\end{align*}\]</span>
+<p>The old math remains valid, but requires some reinterpretation. We will start from the formulation we already have.</p>
+<span class="math display">\[\begin{align}
+p(s_i | t_k)  &amp;= \sum_{j}{{p(s_i | q_j)\cdot p(q_j | t_k) }}  \\
+\end{align}\]</span>
+<p>Both <span class="math inline">\(q'_{j'}\)</span> and <span class="math inline">\(q_j\)</span> describe a surface in the same underlying string, which overlaps to some extent. We can use this information to proportionately assign probabilities of <span class="math inline">\(q'_{j'}\)</span> to the characters, and reinterpret them in terms of <span class="math inline">\(q_j\)</span>.</p>
+<span class="math display">\[\begin{align*}
+    p(q_j | t_j) &amp;= \sum_{q'_{j'}}{\mathrm{overlap}(q_j, q'_{j'}) \cdot  p(q'_{j'} | t_j)} \\
+    \mathrm{overlap}(q_j, q'_{j'}) &amp;= \dfrac{\lvert q_j \cap q'_{j'} \rvert}{\lvert q'_{j'} \rvert} \\
+\end{align*}\]</span>
+<h2 id="validation">Validation</h2>
+<p>I have cooked up a lot of math, now how do I validate it? Thankfully this is grounded in a real use-case. I can try and do German to English to Italian, but the weird thing is I don’t speak/read the source and target languages. I came up with the not-so-standard but useful use-case of translating English to Estonian to English doing the round-trip.</p>
+<p>The above process is textbook definition of <em>lost in translation</em>. When translating through an intermediate language, some information is lost (or added). Some corruption to the tokens happen. However, should the alignment formulations and engineering be sound the scores should correspond for the tokens surviving <em>lost in translation</em>.</p>
+<p>Armed with the above, I filtered out the top-scores and printed them on the console during development. Find some output from the time of development below (click to expand).</p>
+<p><details> <summary>Sample #1</summary></p>
+<pre><code>&gt; The Bergamot project will add and improve client-side machine translation in a web browser.
+&lt; The Bergamot project will add and improve the translation of the client-side machine into a web browser.
+
+The The=0.955146
+ Berg  Berg=0.826679
+amo amo=0.995598
+t t=0.975599
+ project  project=0.955401
+ will  will=0.912722
+ add  add=0.623312
+ and  and=0.941392
+ improve  improve=0.710752
+ translation  the=0.21632
+ translation  translation=0.636088
+-  of=0.396329
+ machine  the=0.685785
+ machine  client=0.437611
+ client -=0.627738
+ client side=0.621546
+ machine  machine=0.720943
+ in  into=0.888125
+ a  a=0.951628
+ web  web=0.778772
+row  b=0.541725
+ser row=0.273472
+ser ser=0.293319
+. .=0.925082
+ will =0.0982262</code></pre>
+<p></details></p>
+<p><details> <summary>Sample #2</summary></p>
+<pre><code>&gt; Unlike current cloud-based options, running directly on users’ machines empowers citizens to preserve their privacy and increases the uptake of language technologies in Europe in various sectors that require confidentiality.
+&lt; Unlike current cloud-based options, working directly on user machines allows citizens to preserve their privacy and increases the adoption of language technologies in Europe in various sectors that require confidentiality.
+
+Unlike Unlike=0.695362
+ options  current=0.526343
+ cloud  cloud=0.808333
+based -=0.519486
+based based=0.494906
+ options  options=0.726565
+, ,=0.953748
+ running  working=0.639273
+ directly  directly=0.927166
+ on  on=0.712787
+ users  user=0.304554
+ machines  machines=0.624575
+ empower  allows=0.385191
+ citizens  citizens=0.503892
+ to  to=0.443355
+ preserve  preserve=0.797836
+ their  their=0.776323
+ privacy  privacy=0.942544
+ and  and=0.947178
+ increases  increases=0.786974
+ the  the=0.646595
+take  adoption=0.835365
+ of  of=0.510325
+ language  language=0.873498
+ technologies  technologies=0.815092
+ in  in=0.853544
+ Europe  Europe=0.7521
+ in  in=0.87099
+ various  various=0.948102
+ sectors  sectors=0.864905
+ that  that=0.706083
+ require  require=0.929663
+ confidentiality  confidentiality=0.754831
+. .=0.937042
+ options =0.068332</code></pre>
+<p></details></p>
+<p><details> <summary>Sample #3</summary></p>
+<pre><code>&gt; Free software integrated with an open-source web browser, such as Mozilla Firefox, will enable bottom-up adoption by non-experts, resulting in cost savings for private and public sector users who would otherwise procure translation or operate monolingually.
+&lt; Free software integrated with an open source web browser, such as Mozilla Firefox, will allow the adoption from the bottom up by non-experts, resulting in cost savings for public and private sector users who would otherwise acquire translation or operate monolinguily.
+
+Free Free=0.56728
+ software  software=0.62599
+ integrated  integrated=0.883837
+ with  with=0.947031
+ an  an=0.839987
+ open  open=0.754714
+source  source=0.690299
+ web  web=0.729925
+row  b=0.353977
+ser row=0.299766
+ser ser=0.309285
+, ,=0.813261
+ as  such=0.704488
+ as  as=0.557725
+ Mo  Mo=0.860583
+z z=0.997161
+illa illa=0.978077
+ Fire  Fire=0.983289
+fo fo=0.996755
+x x=0.99419
+, ,=0.851676
+ enable  will=0.72535
+ enable  allow=0.251865
+ adoption  the=0.261452
+ adoption  adoption=0.643473
+ bottom  from=0.282512
+ bottom  the=0.456695
+ bottom  bottom=0.460874
+up  up=0.47468
+ by  by=0.623741
+ non  non=0.832823
+ non -=0.305707
+expert expert=0.71779
+ non s=0.252237
+, ,=0.891577
+ resulting  resulting=0.386231
+ in  in=0.745363
+ cost  cost=0.685577
+ savings  savings=0.798135
+ for  for=0.787879
+ private  public=0.50413
+ private  and=0.594041
+ private  private=0.719888
+ users  sector=0.415775
+ users  users=0.790084
+ who  who=0.679675
+ would  would=0.659394
+ otherwise  otherwise=0.823563
+ procure  acquire=0.834951
+ translation  translation=0.743358
+ or  or=0.935836
+ operate  operate=0.720217
+ mono  mono=0.744872
+ling ling=0.626815
+ual u=0.684935
+ly ily=0.676535
+. .=0.69808j
+ly =0.0632002</code></pre>
+<p></details></p>
+<p><details> <summary>Sample #4</summary></p>
+<pre><code>&gt; Bergamot is a consortium coordinated by the University of Edinburgh with partners Charles University in Prague, the University of Sheffield, University of Tartu, and Mozilla.
+&lt; Bergamot is a consortium coordinated by the University of Edinburgh with partners from Charles University in Prague, the University of Sheffield, the University of Tartu and Mozilla.
+
+Berg Berg=0.994895
+amo amo=0.991532
+t t=0.967724
+ is  is=0.888633
+ a  a=0.894048
+ consortium  consortium=0.868016
+ coordinated  coordinated=0.773978
+ by  by=0.935519
+ the  the=0.738964
+ University  University=0.929871
+ of  of=0.946889
+ Edinburgh  Edinburgh=0.936051
+ with  with=0.817898
+ partners  partners=0.867468
+ Charles  from=0.216679
+ Charles  Charles=0.731952
+ University  University=0.624898
+ in  in=0.875768
+ Prague  Prague=0.87894
+, ,=0.938541
+ the  the=0.589038
+ University  University=0.910463
+ of  of=0.902571
+ She  She=0.881999
+f f=0.992118
+field field=0.992631
+, ,=0.842823
+ University  the=0.517793
+ University  University=0.835048
+ of  of=0.89574
+ Tar  Tar=0.918662
+tu tu=0.947869
+ and  and=0.821724
+ Mo  Mo=0.884175
+z z=0.972944
+illa illa=0.993525
+. .=0.926998
+ University =0.0469722</code></pre>
+<p></details></p>
+<p>Turns out, the tokens match most of the time strong when they’re same. The implementation works as intended!</p>
+<p>The implementation of the above reinterpretation for vocabulary mismatch is available <a href="https://github.com/jerinphilip/bergamot-translator/blob/4fed75af1deb3ede67d9ade0354b87b0806a0ad3/src/translator/response.cpp#L13-L97">here</a>. This code in action, through the alignments visualization pipeline I get the following render:</p>
+<div class="figure">
+<img src="../static/images/pivoting-de-it.png" alt="German to Italian: alignments after corrections following pivoting." />
+<p class="caption">German to Italian: alignments after corrections following pivoting.</p>
+</div>
+<p>Arrows appear to be pointing in the right direction as well. <em>libera</em> corresponds to <em>freie</em> - this is one case where corresponding tokens have moved around to a different position in translation. The force looks strong between the nodes in the cluster forming <em>enciclopedia</em> and <em>Enzyklopädie</em>. <em>Artikel</em> and <em>articolo</em>, <em>Wikipedia</em> and <em>Wikipedia</em> looks strong as well.</p>
+<p>The test-in-the wild for this piece of code is transferring links and formatting in inline-text. So if you find yourself using Mozilla Firefox’s <a href="https://addons.mozilla.org/en-US/firefox/addon/firefox-translations/">offline translation addon</a> and the links and formatting like bold/italic etc transferring from source HTML to target HTML for non-English pairs accurately, this post is an excuse for an explanation why.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-chen2016guided">
+<p>Wenhu Chen, Evgeny Matusov, Shahram Khadivi, and Jan-Thorsten Peter. 2016. Guided alignment training for topic-aware neural machine translation. <em>arXiv preprint arXiv:1607.01628</em>.</p>
+</div>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
     <title>Notes on Cross-Entropy in autograd</title>
     <link href="http://jerinphilip.github.io/posts/cross-entropy-derivative.html" />
     <id>http://jerinphilip.github.io/posts/cross-entropy-derivative.html</id>
@@ -2448,517 +2826,6 @@ literature.
 <li id="fn1"><p><a href="https://github.com/facebookresearch/faiss">github.com/facebookresearch/faiss</a><a href="#fnref1">↩</a></p></li>
 </ol>
 </div></div>
-</div>
-
-
-<div class="row">
-    <div class="col">
-        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
-    </div>
-</div>
-
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        
-<footer>
-    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
-</footer>
-
-                    </div>
-                </div>
-            </div>
-        <script type="text/javascript" src="../static/js/init.js"></script>
-    </body>
-</html>
-]]></summary>
-</entry>
-<entry>
-    <title>IITB Hindi English - Usable Corpus; Hidden Troubles</title>
-    <link href="http://jerinphilip.github.io/posts/iitb-transfer-check.html" />
-    <id>http://jerinphilip.github.io/posts/iitb-transfer-check.html</id>
-    <published>2018-07-30T00:00:00Z</published>
-    <updated>2018-07-30T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta property="og:title" content="IITB Hindi English - Usable Corpus; Hidden Troubles" />
-        <meta property="og:url" content="http://jerinphilip.github.io/posts/iitb-transfer-check.html" />
-        <title>IITB Hindi English - Usable Corpus; Hidden Troubles</title>
-        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
-        <link rel="stylesheet" href="../static/css/tether.min.css" />
-        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="../static/css/custom.css" />
-        <link rel="stylesheet" href="../static/css/kate.css" />
-        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
-        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
-        <script type="text/javascript" src="../static/js/tether.min.js"></script>
-        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
-        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
-        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
-        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-		<!-- Global site tag (gtag.js) - Google Analytics -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
-		<script>
-		  window.dataLayer = window.dataLayer || [];
-		  function gtag(){dataLayer.push(arguments);}
-		  gtag('js', new Date());
-
-		  gtag('config', 'UA-122834696-1');
-		</script>
-    </head>
-    <body>
-            <div class="container">
-                <div class="row">
-                    <div class="col">
-                        <header>
-    <span><a href="../">/home/jerin</a> </span>
-    <!--
-    <span><a href="/archive.html">posts</a></span>,
-    <span><a href="/contact.html">contact</a></span>
-    -->
-</header>
-
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <h1>IITB Hindi English - Usable Corpus; Hidden Troubles</h1>
-                        <div class="row mb-4">
-    <div class="post-info col">
-        <div>Jul 30, 2018</div>
-
-         
-
-         
-            <div><a href="../tags/posts/ilmt.html">ilmt</a>, <a href="../tags/posts/indian-languages.html">indian-languages</a>, <a href="../tags/posts/mt.html">mt</a></div>
-         
-    </div>
-</div>
-
-<div class="row">
-    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
-<li><a href="#premise">Premise</a></li>
-<li><a href="#architecture-and-framework">Architecture and Framework</a></li>
-<li><a href="#objectives">Objectives</a></li>
-<li><a href="#experiments">Experiments</a><ul>
-<li><a href="#individual-datasets">Individual Datasets</a></li>
-<li><a href="#transfer-across-constituents">Transfer across constituents</a><ul>
-<li><a href="#inferences">Inferences</a></li>
-</ul></li>
-<li><a href="#refining-training-data-based-on-transfer-stats">Refining training data based on transfer stats</a><ul>
-<li><a href="#quantitative">Quantitative</a></li>
-<li><a href="#qualitative">Qualitative</a></li>
-<li><a href="#conclusions">Conclusions</a></li>
-</ul></li>
-</ul></li>
-<li><a href="#forward">Forward</a><ul>
-<li><a href="#better-data-sampling">Better(?) Data Sampling</a></li>
-</ul></li>
-</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><small> This post was written 2 years back in a website I used to report results back to my advisor. I spent quite some time doing quite unnecessary stuff, figuring out what was wrong why I was getting astonishingly poor results compared to those reported in literature. The <a href="http://www.cfilt.iitb.ac.in/iitb_parallel/">corpus page</a> had briefly a filtered version from <a href="https://github.com/deciphyre">Saumitra Yadav</a>, which I thought was nice gesture and since seem to have taken off the same. To point to the general people why not to use a corpus as is, from my hard learnings, I publish the post backdated with my experiences here. The post is added to this site on 2020 November 28.</small></p>
-<p><small>Some of the writing in this document is not very kind, account for that it was from an irritated research-scholar who was held to explain why he had poor results from a strong faculty-advisor, and had to go and do a set of brute-force experiments which would not go anywhere to publication. I have since built many resources out of usable parts of IITB Hindi English corpus, which I am grateful to the people who released the resources for, and in process empathize with their plights as well. </small></p>
-<h1 id="premise">Premise</h1>
-<p>I’ve been trying to produce results with the IIT-Bombay Hindi English parallel corpus, but the dataset doesn’t seem to be giving good results at all, for NMT.</p>
-<p>I’m in no way able to match scores reported by IIT-B teams, with some tinkering and adjustment based the training corpus, I can fine tune it for the test set - but still I have doubts of the suitability of IIT-Bombay Hindi English parallel corpus as a good training set for neural machine translation.</p>
-<h1 id="architecture-and-framework">Architecture and Framework</h1>
-<ul>
-<li>Framework: <a href="https://github.com/OpenNMT/OpenNMT-py/">OpenNMT-py</a></li>
-<li>Preprocessing:</li>
-<li>Primitive Tokenization (Whitespace, punctuation based)</li>
-<li><p><a href="https://github.com/OpenNMT/OpenNMT-py/blob/master/tools/bpe_pipeline.sh">BPE</a></p></li>
-<li>Model Architecture:
-<ul>
-<li>Encoder: BRNN, 500 Neurons x 2 Layers</li>
-<li>Decoder: RNN, 500 Neurons x 2 Layers</li>
-<li>Attention: Luong’s General Attention</li>
-</ul></li>
-<li><p>Decoding: Beam Search, beam width 5.</p></li>
-<li>Training Configurations:
-<ul>
-<li>100 Epochs.</li>
-<li>Model with best (Validation Accuracy, Validation Perplexity) chosen for testing.</li>
-</ul></li>
-<li>Testing:
-<ul>
-<li>Replace unknowns with nearest word using attention.</li>
-</ul></li>
-</ul>
-<h1 id="objectives">Objectives</h1>
-<ul>
-<li><p>Throughout my method, I’ll keep my model constant - since I’m primarily interested in how data affects training and generalization.</p></li>
-<li><p>To figure out what exactly is happening, to see if the individual datasets that constitutes the IIT-Bombay corpus would do any better.</p></li>
-<li><p>See how well one dataset transfers to other - use these edge-weights as a metric to combine datasets for a better training set.</p></li>
-</ul>
-<h1 id="experiments">Experiments</h1>
-<h2 id="individual-datasets">Individual Datasets</h2>
-<p>The following are the results on the individual corpora that constitutes IIT-B Hindi-English parallel dataset provided.</p>
-<table>
-<thead>
-<tr class="header">
-<th>Section</th>
-<th>B-1</th>
-<th>B-2</th>
-<th>B-3</th>
-<th>B-4</th>
-<th>BLEU</th>
-<th>Perplexity</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>gnome</td>
-<td>74.1</td>
-<td>63.7</td>
-<td>58.8</td>
-<td>55.6</td>
-<td>54.87</td>
-<td>1.17</td>
-</tr>
-<tr class="even">
-<td>tanzil</td>
-<td>59.8</td>
-<td>42.2</td>
-<td>37.5</td>
-<td>35.7</td>
-<td>33.54</td>
-<td>1.07</td>
-</tr>
-<tr class="odd">
-<td>ted</td>
-<td>55.6</td>
-<td>30.1</td>
-<td>17.8</td>
-<td>11.0</td>
-<td>23.16</td>
-<td>12.66</td>
-</tr>
-<tr class="even">
-<td>govtweb</td>
-<td>49.2</td>
-<td>23.2</td>
-<td>12.3</td>
-<td>7.3</td>
-<td>14.37</td>
-<td>40.01</td>
-</tr>
-<tr class="odd">
-<td>hiencorp</td>
-<td>45.6</td>
-<td>21.3</td>
-<td>12.1</td>
-<td>7.7</td>
-<td>14.03</td>
-<td>20.41</td>
-</tr>
-<tr class="even">
-<td>mahashabdkosh</td>
-<td>40.6</td>
-<td>16.8</td>
-<td>6.9</td>
-<td>3.3</td>
-<td>10.26</td>
-<td>63.01</td>
-</tr>
-<tr class="odd">
-<td>books</td>
-<td>39.6</td>
-<td>13.0</td>
-<td>4.8</td>
-<td>2.0</td>
-<td>7.29</td>
-<td>41.39</td>
-</tr>
-<tr class="even">
-<td>judicial</td>
-<td>22.6</td>
-<td>4.2</td>
-<td>1.0</td>
-<td>0.3</td>
-<td>1.90</td>
-<td>125.82</td>
-</tr>
-<tr class="odd">
-<td>indicparallel</td>
-<td>4.8</td>
-<td>1.7</td>
-<td>0.9</td>
-<td>0.4</td>
-<td>1.34</td>
-<td>307.91</td>
-</tr>
-<tr class="even">
-<td>opensubs</td>
-<td>32.7</td>
-<td>7.9</td>
-<td>2.9</td>
-<td>0.8</td>
-<td>1.25</td>
-<td>123.40</td>
-</tr>
-<tr class="odd">
-<td>kde</td>
-<td>2.7</td>
-<td>1.1</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.00</td>
-<td>255.67</td>
-</tr>
-<tr class="even">
-<td>wikihead</td>
-<td>9.2</td>
-<td>6.7</td>
-<td>2.9</td>
-<td>0.0</td>
-<td>0.00</td>
-<td>1252.89</td>
-</tr>
-<tr class="odd">
-<td>hienwnetlinkage</td>
-<td>0.1</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.00</td>
-<td>1485.97</td>
-</tr>
-<tr class="even">
-<td>tatoeba</td>
-<td>22.7</td>
-<td>4.1</td>
-<td>0.2</td>
-<td>0.0</td>
-<td>0.00</td>
-<td>199.22</td>
-</tr>
-<tr class="odd">
-<td><strong>whole</strong></td>
-<td><strong>11.4</strong></td>
-<td><strong>1.0</strong></td>
-<td><strong>1.2</strong></td>
-<td><strong>0.1</strong></td>
-<td><strong>0.0</strong></td>
-<td><strong>173.68</strong></td>
-</tr>
-</tbody>
-</table>
-<p>Some notes: 1. I’m using <code>train, dev, test = (0.8, 0.05, 0.15)</code> for the individual corpus, randomly sampling for all three, without replacement. 2. The <strong>whole</strong> values are reported on IIT-B parallel dataset splits of <code>train, dev, test</code>.</p>
-<h2 id="transfer-across-constituents">Transfer across constituents</h2>
-<p>My experiments are similar to the ones performed in <a href="https://arxiv.org/abs/1706.03872">Six Challenges for Neural Machine Translation</a>. I’m using only subsets of the corpus wherein the perplexity is reported to be low/high-BLEU is reported on the individual training, since I don’t expect the others to transfer at all.</p>
-<p>BLEU scores are reported below, upon transfer from columns to the dataset indicated on the row.</p>
-<table>
-<thead>
-<tr class="header">
-<th>transfer</th>
-<th>books</th>
-<th>govtweb</th>
-<th>hiencorp</th>
-<th>tanzil</th>
-<th>ted</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>books</td>
-<td>7.29</td>
-<td>3.92</td>
-<td>5.11</td>
-<td>0.15</td>
-<td>2.36</td>
-</tr>
-<tr class="even">
-<td>gnome</td>
-<td>0.86</td>
-<td>4.17</td>
-<td><strong>39.86</strong></td>
-<td>0.0</td>
-<td>4.33</td>
-</tr>
-<tr class="odd">
-<td>govtweb</td>
-<td><strong>9.57</strong></td>
-<td><strong>14.37</strong></td>
-<td>9.7</td>
-<td>0.07</td>
-<td>3.67</td>
-</tr>
-<tr class="even">
-<td>hiencorp</td>
-<td>3.92</td>
-<td>4.41</td>
-<td>14.03</td>
-<td>0.1</td>
-<td>2.91</td>
-</tr>
-<tr class="odd">
-<td>hienwnetlinkage</td>
-<td>0.0</td>
-<td>0.26</td>
-<td>0.95</td>
-<td>0.0</td>
-<td>0.0</td>
-</tr>
-<tr class="even">
-<td>indicparallel</td>
-<td>4.37</td>
-<td>3.31</td>
-<td><strong>19.58</strong></td>
-<td>0.0</td>
-<td>1.41</td>
-</tr>
-<tr class="odd">
-<td>judicial</td>
-<td>8.16</td>
-<td>8.27</td>
-<td>8.47</td>
-<td>0.0</td>
-<td>5.03</td>
-</tr>
-<tr class="even">
-<td>kde</td>
-<td>0.45</td>
-<td><strong>12.88</strong></td>
-<td><strong>13.51</strong></td>
-<td>0.0</td>
-<td>6.89</td>
-</tr>
-<tr class="odd">
-<td>mahashabdkosh</td>
-<td>7.31</td>
-<td>9.44</td>
-<td>6.99</td>
-<td>0.0</td>
-<td>5.08</td>
-</tr>
-<tr class="even">
-<td>opensubs</td>
-<td>3.05</td>
-<td>4.01</td>
-<td>6.46</td>
-<td>0.0</td>
-<td><strong>11.83</strong></td>
-</tr>
-<tr class="odd">
-<td>tanzil</td>
-<td>1.16</td>
-<td>0.53</td>
-<td>1.01</td>
-<td><strong>33.54</strong></td>
-<td>0.82</td>
-</tr>
-<tr class="even">
-<td>tatoeba</td>
-<td><strong>11.51</strong></td>
-<td><strong>12.58</strong></td>
-<td><strong>16.1</strong></td>
-<td>0.42</td>
-<td>7.22</td>
-</tr>
-<tr class="odd">
-<td>ted</td>
-<td>4.79</td>
-<td>6.89</td>
-<td>9.48</td>
-<td>0.23</td>
-<td><strong>23.16</strong></td>
-</tr>
-<tr class="even">
-<td>wikihead</td>
-<td>0.17</td>
-<td>7.78</td>
-<td><strong>36.13</strong></td>
-<td>0.0</td>
-<td>0.84</td>
-</tr>
-<tr class="odd">
-<td><strong>iitb-parallel</strong></td>
-<td><strong>5.04</strong></td>
-<td><strong>5.37</strong></td>
-<td><strong>5.37</strong></td>
-<td><strong>0.0</strong></td>
-<td><strong>3.96</strong></td>
-</tr>
-</tbody>
-</table>
-<h3 id="inferences">Inferences</h3>
-<p>I’m putting forth the following take-aways from the above table.</p>
-<ul>
-<li>Looks to me like books, govtweb, hiencorp and ted are what would be useful part of the datasets which would generalize to the dev/test sets given - news crawls.</li>
-<li>I’ll however try a few more combinations, see the variation.</li>
-<li>Distributions distant from the test set may end up hurting the model, trying to generalize on a more diverse corpus.
-<ul>
-<li>I’m going to call tanzil, gnome, kde, dictionaries - mostly noise and distant.</li>
-</ul></li>
-<li><strong>hiencorp</strong> transfers well to <strong>gnome</strong> - this is unexpected. Perhaps the same scenario in the larger dataset applies to hiencorp as well.</li>
-</ul>
-<h2 id="refining-training-data-based-on-transfer-stats">Refining training data based on transfer stats</h2>
-<p>I’ll try just IIT-B test set now, using models trained on combination of the above corpora.</p>
-<h3 id="quantitative">Quantitative</h3>
-<p>The percentage of actual training data used to obtain the BLEU is indicated. We’re able to achieve better results with a fraction of the training set.</p>
-<table>
-<thead>
-<tr class="header">
-<th>combination</th>
-<th>% of iitb-train</th>
-<th>BLEU on iitb-test</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>govtweb + hiencorp + ted + tatoeba + indicparallel + opensubs</td>
-<td>24.28</td>
-<td>9.62</td>
-</tr>
-<tr class="even">
-<td>govtweb + hiencorp + ted</td>
-<td>23.24</td>
-<td>9.94</td>
-</tr>
-<tr class="odd">
-<td>govtweb + ted + books</td>
-<td>21.03</td>
-<td>10.22</td>
-</tr>
-<tr class="even">
-<td>govtweb + hiencorp + ted + books + wikihead</td>
-<td>37.18</td>
-<td>10.50</td>
-</tr>
-<tr class="odd">
-<td>govtweb + hiencorp + ted + books</td>
-<td>35.41</td>
-<td>10.86</td>
-</tr>
-</tbody>
-</table>
-<h3 id="qualitative">Qualitative</h3>
-<p>10 is reasonably good enough BLEU for translations to make sense. At this point, it may be a good idea to <a href="https://jerinphilip.github.io/d3-sandbox/exps/iitb-debug/">look at data</a>.<br />
-The translations for refined-4 are most likely the best. And most make sense, they’re not complete garbage at the very least.</p>
-<h3 id="conclusions">Conclusions</h3>
-<p>I think it’s reasonable enough to make the following conclusions at this point:</p>
-<ul>
-<li><p>BLEU is a bad, horrible metric. At least, for NMT based approaches, we need a consensus based metric with multiple hypotheses for an input sentence.</p></li>
-<li>IITB Hindi English Corpus is a disaster. Maybe a necessary evil to some people - but I’d say more trouble than it’s worth.
-<ul>
-<li>Corpus has collected data from a mountain load of sources, most of which are practically useless in generalizing to newscrawl.</li>
-<li>I’m not even sure if the test set is learnable at all from the train-set. When creating datasets to benchmark - at least the train set should contain data enough to learn a distribution which the test is also drawn from. I’m pretty certain test-set contains completely new vocabularies.</li>
-<li>There is scope for releasing a new natural dataset, than this mess of a dataset.</li>
-</ul></li>
-</ul>
-<h1 id="forward">Forward</h1>
-<h3 id="better-data-sampling">Better(?) Data Sampling</h3>
-<p>Related: <a href="https://arxiv.org/pdf/1708.00712.pdf">Dynamic Data Selection for NMT</a></p>
-<p>One thing I’ve seen a lot while training character language models are that frequent patterns are learnt quickly - and the perplexities of these tend to be lower.</p>
-<p>OpenNMT-py has a <a href="http://forum.opennmt.net/t/metrics-bleu-ppl-gold-ppl-pred/249">bunch of metrics</a> which quantify the above, and I believe these maybe of use to capture what would be the trainable “good” corpus within the training set.</p></div>
 </div>
 
 
