@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="slimt: Making of" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/making-of-slimt.html" />
+        <title>slimt: Making of</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>slimt: Making of</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Aug 12, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ml.html">ml</a>, <a href="../tags/posts/bergamot.html">bergamot</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#the-task">The task</a></li>
+<li><a href="#approach">Approach</a><ul>
+<li><a href="#python">Python</a></li>
+<li><a href="#debugger">Debugger</a></li>
+<li><a href="#breakthrough-hack">Breakthrough hack</a></li>
+<li><a href="#tracing-execution">Tracing execution</a></li>
+</ul></li>
+<li><a href="#finishing-up">Finishing up</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>This post is about <a href="https://github.com/jerinphilip/slimt">slimt</a>, software I have been working on for the past 10-days or so. It’s slim machine-translation (MT) inference code. It was fun doing it, and some bits along the journey documentable.</p>
+<p><strong>Flashback</strong> One of the first things I was tasked with starting undergraduate research at university was to move an Optical Character Recognition (OCR) library from C++ to Python. This was circa 2015 - PyTorch was new, TensorFlow was dark magic research seniors rejected in favour of PyTorch. But surprise, What the lab had powering it’s document research efforts was <a href="https://sourceforge.net/p/rnnl/wiki/Home/">rnnlib</a>. Story goes that some researcher managed to get it to work, and it’s been powering text-recognition ever since. Training was on CPUs, the library predated <a href="https://www.image-net.org/challenges/LSVRC/2012/">ImageNet</a>. But Bidirectional LSTMs were the best the lab had back then.</p>
+<p>I went ahead, checked the source-code and reported back we should just do it in PyTorch. Back then I’d blame lack of documentation and a missing map to the source-code. My advisor, unsurprisingly held on to the requirement - <em>it’s just a bunch of matrix multiplies, why is it so hard to move from C++ to Python?</em> Basically I had to find the parts where the said matrices showed up in code and use it - except it was taking long. I tried a lot of stuff - used Doxygen to generate diagrams, opened up source files based on names. Tried to step through the GDB debugger to find which lines of source where getting executed. I’d be naive and go back and report these things to my advisor who mostly works in computer vision to see blank faces all the time. The efforts didn’t succeed (or we did not wait for it rather.</p>
+<p>On the bright side, I did learn quite a bit of C++ tooling and developed some interest in the area. Fast forward 5 years, I have moved from Python machine learning training to AI inference and learning to write machine learning frameworks and had come full circle to a similar task.</p>
+<h2 id="the-task">The task</h2>
+<p>A task pending long in my to-do list is polish <a href="https://github.com/jerinphilip/lemonade">lemonade</a>, a translation input method engine for easier use. I was procrastinating, until contemporary efforts such as <a href="https://github.com/ggerganov/ggml">ggerganov/ggml</a> and <a href="https://github.com/karpathy/llama2.c">karpathy/llama2.c</a> got me thinking - wouldn’t my translation inference only need specialized code for just one class of models?</p>
+<p>The models are transformers with only minor modifications. The <a href="https://github.com/browsermt/students/tree/master/deen">tiny11</a> class of models are actually quite small after 8-bit quantization - <code>ende.student.tiny11</code> is 17MB on my system. marian-dev is source-code I’d been lurking around for about 2 years.</p>
+<p>bergamot-translator builds on top of marian-dev and uses the inference code-path from marian-dev. While marian is a a capable neural network library with focus on machine translation, all the bells and whistles that come with it are not necessary to run inference on client-machines (e.g: autograd, multiple sequence-to-sequence architecture support, beam-search). When I started marian used to be a monstrous 30 minute compile on my laptop, which I brought down using ccache and <a href="../posts/ccache.html">wrote about</a> - stripping the code to only inference would make that look lame and useless. I would not even need ccache anymore.</p>
+<p>So - write an own transformer forward pass, bring compile-times down like crazy, reduce source-complexity*, minimize dependencies, get something of possible value out of it - lot of boxes were checking themselves. Be a shame if I decided not to give it a go, especially given all the free-time I have.</p>
+<p>So, there’s a clear destination - the approach and path still had elements of uncertainties. This is essentially the same task as 7 years ago - produce new inference code for a model trained from the library outside.</p>
+<h2 id="approach">Approach</h2>
+<p>I had a plan in mind - (1) inspect the model binary, (2) step through a debugger checking activated paths, understand the logic behind and then implement. Copying code was okay (and a requirement, since the code computing float operations had to match), so we’d have it slightly easier.</p>
+<h3 id="python">Python</h3>
+<p>I thought of projecting 8-bit <code>int</code> to 32-bit <code>float</code> and doing the operations in PyTorch for a faster first iteration. Once there was clarity in the network architecture and I managed to realize it fast and verify with Python, implementing C++ should be easier - was the thinking.</p>
+<p>I <a href="https://gist.github.com/jerinphilip/670495fca010b2cde4f34091fcb1f5d3">wrote a quick script</a> to load the model in Python.</p>
+<p><details><summary> <code>model.bin</code> (truncated) </summary></p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">Item(Wemb, intgemm8, Shape([<span class="dv">32000</span>, <span class="dv">256</span>]), <span class="dv">8192256</span>)
+Item(Wemb_QuantMultA, intgemm8, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(decoder_ff_logit_out_b, float32, Shape([<span class="dv">1</span>, <span class="dv">32000</span>]), <span class="dv">128000</span>)
+Item(decoder_l1_context_Wk, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+...
+Item(decoder_l1_ffn_b2, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l1_ffn_ffn_ln_bias, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l1_ffn_ffn_ln_scale, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l1_rnn_W, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(decoder_l1_rnn_W_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+...
+Item(decoder_l2_context_Wq, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(decoder_l2_context_Wq_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(decoder_l2_context_Wv, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(decoder_l2_context_Wv_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(decoder_l2_context_bk, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l2_context_bo, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+...
+Item(encoder_l1_ffn_W1, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">1536</span>]), <span class="dv">393472</span>)
+Item(encoder_l1_ffn_W1_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(encoder_l1_ffn_b1, float32, Shape([<span class="dv">1</span>, <span class="dv">1536</span>]), <span class="dv">6144</span>)
+...
+Item(encoder_l1_ffn_ffn_ln_bias, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(encoder_l1_ffn_ffn_ln_scale, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(encoder_l1_self_Wk, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(encoder_l1_self_Wk_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)</code></pre></div>
+<p></details></p>
+<p>Some things make sense. There are attention layers, feed-forward networks, RNNs, and output layer, some layernorm. I have the flat data, not the structure. I was hoping to recover neural network structure from a research or system-description paper of some sort. I checked <span class="citation">Kim et al. (<a href="#ref-kim2019research">2019</a>)</span>, there’s some mention of the RNN (SSRU), but a network diagram is missing. I could do further level searches on papers this paper was referring to. Without the structure, it would be difficult to reproduce in Python. I’ll also need some tooling to verify I’m on the right path. So I decided to see if throwing the debugger and stepping would be of any help. After-all, code was <a href="https://www.commitstrip.com/wp-content/uploads/2016/08/Strip-Les-specs-cest-du-code-650-finalenglish.jpg">absolute truth</a>.</p>
+<h3 id="debugger">Debugger</h3>
+<p>IDEs back in 2015 when I took on the previous porting had as well I’d guess. But back then I knew only <code>gdb</code> and mostly used vim. I still do use vim most of the time, and VSCode with an vim emulation layer. VSCode has a nice debugger. I currently use <a href="https://vscodium.com/">VSCodium</a>, which is a fork. Internally, VSCode uses <code>gdb</code>, but it’s easier to move around and inspect.</p>
+<p>Starting with bergamot’s <code>translateBatch</code> entrypoint, I jumped to function definitions and checked a few call-stacks. Created a script to link and save, as I unrolled the code while porting. See a few examples below.</p>
+<details><summary> Embedding (index_select) </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/tensors/cpu/tensor_operators.cpp#L565">marian::cpu::CopyRows</a>(marian::Tensor out_, const marian::Tensor in_, const marian::Tensor indices) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/tensors/tensor_operators.h#L217">marian::CopyRows</a>(marian::Tensor arg1, const marian::Tensor arg2, const marian::Tensor arg3) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L672">marian::RowsNodeOp::forwardOps()::{lambda()#1}::operator()() const</a>(const struct {...} * const __closure) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node.h#L64">marian::Node::runForward(std::vector<std::function<void ()>, std::allocator<std::function<void ()> > > const&)</a>(marian::Node * const this, const marian::NodeOps & ops) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node.cpp#L67">marian::Node::forward</a>(marian::Node * const this) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/expression_graph.cpp#L114">marian::ExpressionGraph::forward</a>(marian::ExpressionGraph * const this, std::__cxx11::list<IntrusivePtr<marian::Chainable<IntrusivePtr<marian::TensorBase> > >, std::allocator<IntrusivePtr<marian::Chainable<IntrusivePtr<marian::TensorBase> > > > > & forwardTape, bool finalPass) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/expression_graph.cpp#L101">marian::ExpressionGraph::forwardNext</a>(marian::ExpressionGraph * const this) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/expression_graph.h#L246">marian::ExpressionGraph::forward</a>(marian::ExpressionGraph * const this) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L451">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch)</pre>
+<p></details></p>
+<details><summary> Positional Embeddings </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_initializers.cpp#L216">marian::inits::sinusoidalPositionEmbeddings</a>(int start) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L105">marian::Transformer<marian::EncoderBase>::addPositionalEmbeddings</a>(const marian::Transformer<marian::EncoderBase> * const this, marian::Expr input, int start, bool trainPosEmbeddings) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L117">marian::Transformer<marian::EncoderBase>::addSpecialEmbeddings</a>(const marian::Transformer<marian::EncoderBase> * const this, marian::Expr input, int start) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L555">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L543">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<details><summary> Encoder forward </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L548">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L540">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<details><summary> transposed log mask </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L132">marian::Transformer<marian::EncoderBase>::transposedLogMask</a>(marian::Expr mask) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L569">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L540">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<details> <summary> postprocess: Applied after each FFN (Takes care of skip, off dropout and LayerNorm) </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L181">marian::Transformer<marian::EncoderBase>::postProcess</a>(const marian::Transformer<marian::EncoderBase> * const this, std::string prefix, std::string ops, marian::Expr input, marian::Expr prevInput, float dropProb) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L372">marian::Transformer<marian::EncoderBase>::LayerAttention</a>(marian::Transformer<marian::EncoderBase> * const this, std::string prefix, marian::Expr input, const marian::Expr & keys, const marian::Expr & values, const marian::Expr & mask, int dimHeads, bool cache, bool saveAttentionWeights) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L575">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L540">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<p>I quickly discovered the code-paths that were consistently getting activated when I ran input through, and discovered some of the realizations of the transformer code. but this process was slower than what I’d wished for. My plan was viable, just not fast enough. I needed something faster.</p>
+<h3 id="breakthrough-hack">Breakthrough hack</h3>
+<p>During this process, I discovered the <a href="https://github.com/browsermt/marian-dev/blob/aa0221e687fe8b3b69b5bb64279d4349663ad410/src/common/definitions.h#L14"><code>NodeOp</code></a> macro, which looked as follows.</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#define NodeOp(op) [=]() { op; }</span></code></pre></div>
+<p>For some reason, marian was using this to describe forward and backward in the computational graph, mostly consistently. Since searching for, finding the macro, manually putting the breakpoint wasn’t cutting it - I quickly googled if I could programmatically stop for debugger. Turns out, I can - <code>std::raise(SIGTRAP)</code>.</p>
+<p>The operating system notifies the debugger on SIGTRAP signal (if no debugger, the program simply exits). The debugger can map the instruction pointer to the line in source both ways (provided compiled with <code>-g</code> and ideally, <code>-O0</code>, which is <code>-DCMAKE_BUILD_TYPE=Debug</code>).</p>
+<p>I set a programmatic breakpoint and tried to extract call-stack programmatically as well:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#define NodeOp(op)                                                  </span>\
+<span class="pp">  [=]() {                                                           </span>\
+<span class="pp">    std::raise(SIGTRAP);                                            </span>\
+<span class="pp">    std::string callstack = marian::getCallStack(/*skipLevels=*/3); </span>\
+<span class="pp">    std::cerr &lt;&lt; callstack &lt;&lt; &quot;</span><span class="er">\</span><span class="pp">n&quot;;                                 </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__PRETTY_FUNCTION__</span><span class="pp"> ;                              </span>\
+<span class="pp">    std::cerr &lt;&lt; &quot; &quot; &lt;&lt; </span><span class="ot">__FILE__</span><span class="pp"> &lt;&lt; &quot;:&quot;;                            </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__LINE__</span><span class="pp"> &lt;&lt; &quot;</span><span class="er">\</span><span class="pp">n&quot;;                                  </span>\
+<span class="pp">    op;                                                             </span>\
+<span class="pp">  }</span></code></pre></div>
+<p>I quickly realized I no longer needed the <code>SIGTRAP</code> to know which functions where getting called. Dropping it and just using <code>__PRETTY_FUNCTION__</code> information identified ops using <code>NodeOp(...)</code>.</p>
+<details> <summary> Ops (click to expand) </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/tensors/cpu/integer_common.h#L46">marian::cpu::integer::fetchAlphaFromModelNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L419">marian::DotBatchedNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L735">marian::GatherNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L1252">marian::HighwayNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L1200">marian::LayerNormalizationOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L450">marian::LogSoftmaxNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L728">marian::NegNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L831">marian::PlusNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L284">marian::ReLUNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L672">marian::RowsNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L42">marian::ScalarAddNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L100">marian::ScalarMultNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L425">marian::SoftmaxNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L747">marian::TransposeNodeOp::forwardOps()::&lt;lambda&gt;</a>()
+</pre>
+<p></details></p>
+<p>The first discovered Ops were not exhaustive. There are some functions that simply use a capturing lambda and not the macro. I don’t think the authors of the macro ever intended it to be used this way. To my surprise, I discovered <code>NodeOp</code> was even <a href="https://marian-nmt.github.io/docs/api">mentioned by a documentation effort</a>. Macros are supposed to be <a href="https://stackoverflow.com/questions/14041453/why-are-preprocessor-macros-evil-and-what-are-the-alternatives">bad and evil</a> per established wisdom.</p>
+<p>If as reader, you feel that this article is jumping all around the place - know that it is an accurate reflection my mental state and uncertainty regarding the target at this point. But from here-on, I had clarity.</p>
+<h3 id="tracing-execution">Tracing execution</h3>
+<p>I’m mostly lurking and operating in the compilers intersection machine-learning space now. So far I’ve also followed the <a href="https://minitorch.github.io/">minitorch</a> tutorial twice - once in Python and once in C++ to know what a computation graph is and how to build autograd. This puts me in place with certain theory and understanding that could make life further simpler for me.</p>
+<p>All that aside, we will consider a toy language of data-types being <code>Expr</code>, indicating an expression (more specifically, the result of an expression). We can do the following with <code>Expr</code>s for an example.</p>
+<p>We’ll make a simplified definition of <code>Expr</code> as follows:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// Expr lhs = Op(rhs[0], rhs[1], ...)</span>
+<span class="kw">struct</span> Expr { 
+   <span class="dt">float</span>* value; <span class="co">// Holds underlying </span>
+   storage <span class="dt">size_t</span> size;  <span class="co">// Size of the storage, in bytes.</span>
+
+   <span class="kw">using</span> Operands = <span class="bu">std::</span>vector&lt;Expr&gt;; 
+   Operands rhs; <span class="co">// operands that populate the result value.</span>
+
+   <span class="kw">using</span> Op  = <span class="bu">std::</span>function&lt;<span class="dt">void</span>(<span class="dt">void</span>)&gt;; 
+   <span class="kw">using</span> Ops = <span class="bu">std::</span>vector&lt;Op&gt;;
+
+   Ops forward() { 
+     <span class="kw">auto</span> op = [=](){ 
+       <span class="co">// Open up rhs, apply intended function.</span>
+       <span class="co">// write to value.  </span>
+     }; 
+     <span class="cf">return</span> { op }; 
+   }
+
+   <span class="dt">float</span> *grad; <span class="co">// Same size as value, holds gradient</span>
+
+   <span class="co">// Operates on grad, after receiving gradients from Expr(s) ahead.  </span>
+   Ops backward(<span class="dt">float</span> *grad_from_successor_node);  };</code></pre></div>
+<p>Since we’re doing inference, we’re not interested in <code>backward</code> and <code>grad</code>.</p>
+<p>Consider the expression as an LHS which is obtained by some operation on the rhs operands.</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">Expr x = ones(<span class="dv">2</span>, <span class="dv">2</span>);
+Expr y = zero(<span class="dv">2</span>, <span class="dv">2</span>);
+Expr z = x + y;</code></pre></div>
+<p>Consider <code>z</code>, which is a result of <code>+</code> on <code>[x, y]</code>, <code>Expr</code> would be as follows:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">struct</span> Add: <span class="kw">public</span> Expr {
+<span class="kw">public</span>:
+  <span class="co">// ...</span>
+  Ops forward() {
+    <span class="co">// Open up rhs, apply intended function.</span>
+    <span class="co">// write to value.</span>
+    <span class="co">// x, y are available in rhs.</span>
+    Op add = [=](){
+      <span class="cf">for</span>(<span class="dt">size_t</span> i = <span class="dv">0</span>; i &lt; size; i++){
+          value[i] = rhs[<span class="dv">0</span>].value[i] + rhs[<span class="dv">1</span>].value[i];
+      }
+    };
+    <span class="cf">return</span> { add };
+  }
+};</code></pre></div>
+<p>Note that we’re only recording that so and so operations must be done using so and so storage locations - <a href="https://en.wikipedia.org/wiki/Thunk">thunks</a>. We’ve not actually executed them yet. Execution would look as follows:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// Compute loss</span>
+loss = f(rhs1, rhs2, ...);
+
+<span class="co">// Note: Topological order begins from first expr, it is the</span>
+<span class="co">// reverse-topological-order that starts with loss. </span>
+<span class="bu">std::</span>vector&lt;Expr&gt; order = topological_order(loss); 
+
+<span class="co">// Run forward ops</span>
+<span class="cf">for</span>(<span class="kw">auto</span> expr: order){
+  forward_ops = expr-&gt;forward();
+  <span class="co">// Execute functions, ends up in order of construction.</span>
+  forward_ops(); 
+}</code></pre></div>
+<p>Okay.. what’s the point of all this? Turns out <code>NodeOp</code> being used to package the thunk means I can use <code>NodeOp</code> macro to add a pre and post hook to the statements. This means by the following modification, I can inspect the values of <code>lhs</code> (value) before and after, and also inspect the state of <code>rhs</code> (operands) during the op.</p>
+<p>The modification I’m looking for looks like:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#define WrapStatementInLambda(statement)                            </span>\
+<span class="pp">  [=]() {                                                           </span>\
+<span class="pp">    // Open up and inspect value (Before op)                        </span>\
+<span class="pp">    // (Not usually required.)                                      </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    // Extra local information                                      </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__PRETTY_FUNCTION__</span><span class="pp"> ;                              </span>\
+<span class="pp">    std::cerr &lt;&lt; &quot; &quot; &lt;&lt; </span><span class="ot">__FILE__</span><span class="pp"> &lt;&lt; &quot;:&quot;;                            </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__LINE__</span><span class="pp"> &lt;&lt; &quot;</span><span class="er">\</span><span class="pp">n&quot;;                                  </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    // Execute the operation                                        </span>\
+<span class="pp">    // Just leave the arg to unroll statements wrapped by macro.    </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    statement;                                                      </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    // save value (lhs), rhs[0], rhs[1] ... to disk(?)              </span>\
+<span class="pp">  }</span>
+
+
+<span class="pp">#define NodeOp(op)  WrapStatementInLambda(op)</span></code></pre></div>
+<p>The rich-version I eventually ended up using is available in <a href="https://github.com/jerinphilip/slimt/blob/main/scripts/marian-trace-gen.h">slimt/marian-trace-gen.h</a>. I was also able to extract shape metadata at runtime, some name and unique-identifier information that was stored in the values. The unique-id meant I could conditionally stop during execution based on the identifier value. The macro-modification is a one-off throwaway item, but can be refined to trace the exact final operations executed by a marian forward pass and backward-pass if need be. There were a few <code>Expr</code>s not using <code>NodeOp</code>, but were <a href="https://github.com/jerinphilip/marian/compare/dev...jerinphilip:marian:tracing">easy to tame</a>.</p>
+<p>My traces looked like below:</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="fu">file:</span><span class="at"> </span><span class="st">&quot;/home/jerin/code/bergamot-translator/3rd_party/marian-dev/src/graph/node_operators_binary.h&quot;</span>
+<span class="fu">line:</span><span class="at"> 836</span>
+<span class="fu">fn:</span><span class="at"> </span><span class="st">&quot;marian::PlusNodeOp::forwardOps()::&lt;lambda()&gt;&quot;</span>
+<span class="fu">op:</span><span class="at"> </span><span class="kw">{</span> Element(_1 = _2 + _3, val_, child(0)-&gt;val(), child(1)-&gt;val()) <span class="kw">}</span>
+<span class="fu">before:</span><span class="at"> var_45 float32 [2x8x4x4]</span>
+<span class="fu">after:</span><span class="at"> var_45 float32 [2x8x4x4] var_45-PlusNodeOp-float32_2x8x4x4-lhs.bin</span>
+<span class="fu">operands:</span><span class="at"> </span>
+  <span class="kw">-</span> var_44 float32 <span class="kw">[</span>2x8x4x4<span class="kw">]</span> var_45-PlusNodeOp-float32_2x8x4x4-rhs0-float32_2x8x4x4.bin
+  <span class="kw">-</span> var_16 float32 <span class="kw">[</span>2x1x1x4<span class="kw">]</span> var_45-PlusNodeOp-float32_2x8x4x4-rhs1-float32_2x1x1x4.bin
+
+
+<span class="fu">file:</span><span class="at"> </span><span class="st">&quot;/home/jerin/code/bergamot-translator/3rd_party/marian-dev/src/graph/node_operators_unary.h&quot;</span>
+<span class="fu">line:</span><span class="at"> 425</span>
+<span class="fu">fn:</span><span class="at"> </span><span class="st">&quot;marian::SoftmaxNodeOp::forwardOps()::&lt;lambda()&gt;&quot;</span>
+<span class="fu">op:</span><span class="at"> </span><span class="kw">{</span> Softmax(val_, child(0)-&gt;val()) <span class="kw">}</span>
+<span class="fu">before:</span><span class="at"> var_46 float32 [2x8x4x4]</span>
+<span class="fu">after:</span><span class="at"> var_46 float32 [2x8x4x4] var_46-SoftmaxNodeOp-float32_2x8x4x4-lhs.bin</span>
+<span class="fu">operands:</span><span class="at"> </span>
+  <span class="kw">-</span> var_45 float32 <span class="kw">[</span>2x8x4x4<span class="kw">]</span> var_46-SoftmaxNodeOp-float32_2x8x4x4-rhs0-float32_2x8x4x4.bin</code></pre></div>
+<p>The full execution trace is available <a href="https://gist.github.com/jerinphilip/e3ff5a29c55a554849c0e5a3ed4ca3fa">here</a>.</p>
+<p>Notice, how I had the LHS and RHS for the ops saved onto-disk under unique names. This meant I could even unit-test my ops. The trace was <em>linear</em> unlike the nested functions I’d been hopping through back and forth, context switching. The linear nature made the underlying operations easier to reason with. With some domain knowledge it’s easy to recognize the above code as the softmax in attention after addition of mask for pad-tokens.</p>
+<p>At this point, I knew what I wanted was realizable at a pace I was happy with. The problem was more or less solved inside my head. I had all the missing pieces, and a really small chance of failure. Note that I hadn’t completed the solution yet, I’ve just figured out the solution.</p>
+<h2 id="finishing-up">Finishing up</h2>
+<p>I had made the process mechanical. I traversed the trace porting code step-by-step, checking LHS and RHS tensors matched what I computed using my ported code. I built some verification convenience functions to check as I progressed as well, which looked within source as follows.</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">Tensor &amp;encoder_out = x;
+VERIFY_MATCH(encoder_out,
+             <span class="st">&quot;var_394-LayerNormalizationOp-float32_1x2x4x256-lhs.bin&quot;</span>);
+<span class="cf">return</span> <span class="va">decoder_</span>.decode(encoder_out, mask, batch.words());</code></pre></div>
+<p>I hit some hiccups at 8-bit matrix multiply using intgemm (and ruy later on) in marian. But the saved tensor input/output pairs I left for myself via the tracing helped a lot.</p>
+<p>That I was familiar with the components help speed things up a bit. Some corners were cut, but no problem - we can fix it slowly if need be. There is a lot more room or optimizations. I am currently trying my hands at compilers and parallel-programming, and weak-baselines should be opportunity to learn more things on the way.</p>
+<p>Changing <code>Node.h</code> and recompiling I’d estimate take 20+ minutes on my laptop, which is enough time to walk away elsewhere while developing tracing scripts - so the new more powerful PC helped a bit.</p>
+<p>The source-code is <a href="https://github.com/jerinphilip/slimt">made public</a> on achieving bare-minimum functionality on <code>x86_64</code>, and have <a href="https://github.com/jerinphilip/slimt/pull/2">a PR open</a> to support <code>aarch64</code>. Some code that I wrote for <a href="https://github.com/jerinphilip/MozIntGemm">ARM support for Mozilla</a> back in the day and the experience ended up helping. As of now I am aware of KDE using bergamot’s models in <a href="https://invent.kde.org/libraries/ktextaddons/-/tree/master/texttranslator/translator/plugins/bergamot">KTextAddons</a>. A refined version of this could be useful to Mozilla, who I know to be using only tiny11 models.</p>
+<p>This post mostly deals with the development process. I hope to write in the future about the actual technical and math content surrounding these models.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-kim2019research">
+<p>Young Jin Kim, Marcin Junczys-Dowmunt, Hany Hassan Awadalla, Alham Fikri Aji, Kenneth Heafield, Roman Grundkiewicz, and Nikolay Bogoychev. 2019. From research to production and back: Ludicrously fast neural machine translation. In <em>Proceedings of the 3rd workshop on neural generation and translation</em>, pages 280–288.</p>
+</div>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>

@@ -8,8 +8,393 @@
         <name>Jerin Philip</name>
         <email>jerinphilip@live.in</email>
     </author>
-    <updated>2023-07-24T00:00:00Z</updated>
+    <updated>2023-08-12T00:00:00Z</updated>
     <entry>
+    <title>slimt: Making of</title>
+    <link href="http://jerinphilip.github.io/posts/making-of-slimt.html" />
+    <id>http://jerinphilip.github.io/posts/making-of-slimt.html</id>
+    <published>2023-08-12T00:00:00Z</published>
+    <updated>2023-08-12T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="slimt: Making of" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/making-of-slimt.html" />
+        <title>slimt: Making of</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
+		<script>
+		  window.dataLayer = window.dataLayer || [];
+		  function gtag(){dataLayer.push(arguments);}
+		  gtag('js', new Date());
+
+		  gtag('config', 'UA-122834696-1');
+		</script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>slimt: Making of</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Aug 12, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ml.html">ml</a>, <a href="../tags/posts/bergamot.html">bergamot</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#the-task">The task</a></li>
+<li><a href="#approach">Approach</a><ul>
+<li><a href="#python">Python</a></li>
+<li><a href="#debugger">Debugger</a></li>
+<li><a href="#breakthrough-hack">Breakthrough hack</a></li>
+<li><a href="#tracing-execution">Tracing execution</a></li>
+</ul></li>
+<li><a href="#finishing-up">Finishing up</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>This post is about <a href="https://github.com/jerinphilip/slimt">slimt</a>, software I have been working on for the past 10-days or so. It’s slim machine-translation (MT) inference code. It was fun doing it, and some bits along the journey documentable.</p>
+<p><strong>Flashback</strong> One of the first things I was tasked with starting undergraduate research at university was to move an Optical Character Recognition (OCR) library from C++ to Python. This was circa 2015 - PyTorch was new, TensorFlow was dark magic research seniors rejected in favour of PyTorch. But surprise, What the lab had powering it’s document research efforts was <a href="https://sourceforge.net/p/rnnl/wiki/Home/">rnnlib</a>. Story goes that some researcher managed to get it to work, and it’s been powering text-recognition ever since. Training was on CPUs, the library predated <a href="https://www.image-net.org/challenges/LSVRC/2012/">ImageNet</a>. But Bidirectional LSTMs were the best the lab had back then.</p>
+<p>I went ahead, checked the source-code and reported back we should just do it in PyTorch. Back then I’d blame lack of documentation and a missing map to the source-code. My advisor, unsurprisingly held on to the requirement - <em>it’s just a bunch of matrix multiplies, why is it so hard to move from C++ to Python?</em> Basically I had to find the parts where the said matrices showed up in code and use it - except it was taking long. I tried a lot of stuff - used Doxygen to generate diagrams, opened up source files based on names. Tried to step through the GDB debugger to find which lines of source where getting executed. I’d be naive and go back and report these things to my advisor who mostly works in computer vision to see blank faces all the time. The efforts didn’t succeed (or we did not wait for it rather.</p>
+<p>On the bright side, I did learn quite a bit of C++ tooling and developed some interest in the area. Fast forward 5 years, I have moved from Python machine learning training to AI inference and learning to write machine learning frameworks and had come full circle to a similar task.</p>
+<h2 id="the-task">The task</h2>
+<p>A task pending long in my to-do list is polish <a href="https://github.com/jerinphilip/lemonade">lemonade</a>, a translation input method engine for easier use. I was procrastinating, until contemporary efforts such as <a href="https://github.com/ggerganov/ggml">ggerganov/ggml</a> and <a href="https://github.com/karpathy/llama2.c">karpathy/llama2.c</a> got me thinking - wouldn’t my translation inference only need specialized code for just one class of models?</p>
+<p>The models are transformers with only minor modifications. The <a href="https://github.com/browsermt/students/tree/master/deen">tiny11</a> class of models are actually quite small after 8-bit quantization - <code>ende.student.tiny11</code> is 17MB on my system. marian-dev is source-code I’d been lurking around for about 2 years.</p>
+<p>bergamot-translator builds on top of marian-dev and uses the inference code-path from marian-dev. While marian is a a capable neural network library with focus on machine translation, all the bells and whistles that come with it are not necessary to run inference on client-machines (e.g: autograd, multiple sequence-to-sequence architecture support, beam-search). When I started marian used to be a monstrous 30 minute compile on my laptop, which I brought down using ccache and <a href="../posts/ccache.html">wrote about</a> - stripping the code to only inference would make that look lame and useless. I would not even need ccache anymore.</p>
+<p>So - write an own transformer forward pass, bring compile-times down like crazy, reduce source-complexity*, minimize dependencies, get something of possible value out of it - lot of boxes were checking themselves. Be a shame if I decided not to give it a go, especially given all the free-time I have.</p>
+<p>So, there’s a clear destination - the approach and path still had elements of uncertainties. This is essentially the same task as 7 years ago - produce new inference code for a model trained from the library outside.</p>
+<h2 id="approach">Approach</h2>
+<p>I had a plan in mind - (1) inspect the model binary, (2) step through a debugger checking activated paths, understand the logic behind and then implement. Copying code was okay (and a requirement, since the code computing float operations had to match), so we’d have it slightly easier.</p>
+<h3 id="python">Python</h3>
+<p>I thought of projecting 8-bit <code>int</code> to 32-bit <code>float</code> and doing the operations in PyTorch for a faster first iteration. Once there was clarity in the network architecture and I managed to realize it fast and verify with Python, implementing C++ should be easier - was the thinking.</p>
+<p>I <a href="https://gist.github.com/jerinphilip/670495fca010b2cde4f34091fcb1f5d3">wrote a quick script</a> to load the model in Python.</p>
+<p><details><summary> <code>model.bin</code> (truncated) </summary></p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">Item(Wemb, intgemm8, Shape([<span class="dv">32000</span>, <span class="dv">256</span>]), <span class="dv">8192256</span>)
+Item(Wemb_QuantMultA, intgemm8, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(decoder_ff_logit_out_b, float32, Shape([<span class="dv">1</span>, <span class="dv">32000</span>]), <span class="dv">128000</span>)
+Item(decoder_l1_context_Wk, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+...
+Item(decoder_l1_ffn_b2, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l1_ffn_ffn_ln_bias, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l1_ffn_ffn_ln_scale, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l1_rnn_W, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(decoder_l1_rnn_W_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+...
+Item(decoder_l2_context_Wq, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(decoder_l2_context_Wq_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(decoder_l2_context_Wv, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(decoder_l2_context_Wv_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(decoder_l2_context_bk, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(decoder_l2_context_bo, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+...
+Item(encoder_l1_ffn_W1, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">1536</span>]), <span class="dv">393472</span>)
+Item(encoder_l1_ffn_W1_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)
+Item(encoder_l1_ffn_b1, float32, Shape([<span class="dv">1</span>, <span class="dv">1536</span>]), <span class="dv">6144</span>)
+...
+Item(encoder_l1_ffn_ffn_ln_bias, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(encoder_l1_ffn_ffn_ln_scale, float32, Shape([<span class="dv">1</span>, <span class="dv">256</span>]), <span class="dv">1024</span>)
+Item(encoder_l1_self_Wk, intgemm8, Shape([<span class="dv">256</span>, <span class="dv">256</span>]), <span class="dv">65792</span>)
+Item(encoder_l1_self_Wk_QuantMultA, float32, Shape([<span class="dv">1</span>, <span class="dv">1</span>]), <span class="dv">256</span>)</code></pre></div>
+<p></details></p>
+<p>Some things make sense. There are attention layers, feed-forward networks, RNNs, and output layer, some layernorm. I have the flat data, not the structure. I was hoping to recover neural network structure from a research or system-description paper of some sort. I checked <span class="citation">Kim et al. (<a href="#ref-kim2019research">2019</a>)</span>, there’s some mention of the RNN (SSRU), but a network diagram is missing. I could do further level searches on papers this paper was referring to. Without the structure, it would be difficult to reproduce in Python. I’ll also need some tooling to verify I’m on the right path. So I decided to see if throwing the debugger and stepping would be of any help. After-all, code was <a href="https://www.commitstrip.com/wp-content/uploads/2016/08/Strip-Les-specs-cest-du-code-650-finalenglish.jpg">absolute truth</a>.</p>
+<h3 id="debugger">Debugger</h3>
+<p>IDEs back in 2015 when I took on the previous porting had as well I’d guess. But back then I knew only <code>gdb</code> and mostly used vim. I still do use vim most of the time, and VSCode with an vim emulation layer. VSCode has a nice debugger. I currently use <a href="https://vscodium.com/">VSCodium</a>, which is a fork. Internally, VSCode uses <code>gdb</code>, but it’s easier to move around and inspect.</p>
+<p>Starting with bergamot’s <code>translateBatch</code> entrypoint, I jumped to function definitions and checked a few call-stacks. Created a script to link and save, as I unrolled the code while porting. See a few examples below.</p>
+<details><summary> Embedding (index_select) </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/tensors/cpu/tensor_operators.cpp#L565">marian::cpu::CopyRows</a>(marian::Tensor out_, const marian::Tensor in_, const marian::Tensor indices) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/tensors/tensor_operators.h#L217">marian::CopyRows</a>(marian::Tensor arg1, const marian::Tensor arg2, const marian::Tensor arg3) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L672">marian::RowsNodeOp::forwardOps()::{lambda()#1}::operator()() const</a>(const struct {...} * const __closure) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node.h#L64">marian::Node::runForward(std::vector<std::function<void ()>, std::allocator<std::function<void ()> > > const&)</a>(marian::Node * const this, const marian::NodeOps & ops) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node.cpp#L67">marian::Node::forward</a>(marian::Node * const this) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/expression_graph.cpp#L114">marian::ExpressionGraph::forward</a>(marian::ExpressionGraph * const this, std::__cxx11::list<IntrusivePtr<marian::Chainable<IntrusivePtr<marian::TensorBase> > >, std::allocator<IntrusivePtr<marian::Chainable<IntrusivePtr<marian::TensorBase> > > > > & forwardTape, bool finalPass) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/expression_graph.cpp#L101">marian::ExpressionGraph::forwardNext</a>(marian::ExpressionGraph * const this) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/expression_graph.h#L246">marian::ExpressionGraph::forward</a>(marian::ExpressionGraph * const this) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L451">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch)</pre>
+<p></details></p>
+<details><summary> Positional Embeddings </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_initializers.cpp#L216">marian::inits::sinusoidalPositionEmbeddings</a>(int start) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L105">marian::Transformer<marian::EncoderBase>::addPositionalEmbeddings</a>(const marian::Transformer<marian::EncoderBase> * const this, marian::Expr input, int start, bool trainPosEmbeddings) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L117">marian::Transformer<marian::EncoderBase>::addSpecialEmbeddings</a>(const marian::Transformer<marian::EncoderBase> * const this, marian::Expr input, int start) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L555">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L543">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<details><summary> Encoder forward </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L548">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L540">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<details><summary> transposed log mask </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L132">marian::Transformer<marian::EncoderBase>::transposedLogMask</a>(marian::Expr mask) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L569">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L540">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<details> <summary> postprocess: Applied after each FFN (Takes care of skip, off dropout and LayerNorm) </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L181">marian::Transformer<marian::EncoderBase>::postProcess</a>(const marian::Transformer<marian::EncoderBase> * const this, std::string prefix, std::string ops, marian::Expr input, marian::Expr prevInput, float dropProb) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L372">marian::Transformer<marian::EncoderBase>::LayerAttention</a>(marian::Transformer<marian::EncoderBase> * const this, std::string prefix, marian::Expr input, const marian::Expr & keys, const marian::Expr & values, const marian::Expr & mask, int dimHeads, bool cache, bool saveAttentionWeights) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L575">marian::EncoderTransformer::apply</a>(marian::EncoderTransformer * const this, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/transformer.h#L540">marian::EncoderTransformer::build</a>(marian::EncoderTransformer * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/encoder_decoder.cpp#L187">marian::EncoderDecoder::startState</a>(marian::EncoderDecoder * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/models/costs.h#L357">marian::models::Stepwise::startState</a>(marian::models::Stepwise * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/scorers.h#L126">marian::ScorerWrapper::startState</a>(marian::ScorerWrapper * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/translator/beam_search.cpp#L280">marian::BeamSearch::search</a>(marian::BeamSearch * const this, marian::Ptr graph, marian::Ptr batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/translation_model.cpp#L186">marian::bergamot::TranslationModel::translateBatch</a>(marian::bergamot::TranslationModel * const this, marian::bergamot::Workspace & workspace, marian::bergamot::Batch & batch) 
+<a href="../home/jerin/code/bergamot-translator/src/translator/service.cpp#L149">operator()</a>(const struct {...} * const __closure)
+</pre>
+<p></details></p>
+<p>I quickly discovered the code-paths that were consistently getting activated when I ran input through, and discovered some of the realizations of the transformer code. but this process was slower than what I’d wished for. My plan was viable, just not fast enough. I needed something faster.</p>
+<h3 id="breakthrough-hack">Breakthrough hack</h3>
+<p>During this process, I discovered the <a href="https://github.com/browsermt/marian-dev/blob/aa0221e687fe8b3b69b5bb64279d4349663ad410/src/common/definitions.h#L14"><code>NodeOp</code></a> macro, which looked as follows.</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#define NodeOp(op) [=]() { op; }</span></code></pre></div>
+<p>For some reason, marian was using this to describe forward and backward in the computational graph, mostly consistently. Since searching for, finding the macro, manually putting the breakpoint wasn’t cutting it - I quickly googled if I could programmatically stop for debugger. Turns out, I can - <code>std::raise(SIGTRAP)</code>.</p>
+<p>The operating system notifies the debugger on SIGTRAP signal (if no debugger, the program simply exits). The debugger can map the instruction pointer to the line in source both ways (provided compiled with <code>-g</code> and ideally, <code>-O0</code>, which is <code>-DCMAKE_BUILD_TYPE=Debug</code>).</p>
+<p>I set a programmatic breakpoint and tried to extract call-stack programmatically as well:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#define NodeOp(op)                                                  </span>\
+<span class="pp">  [=]() {                                                           </span>\
+<span class="pp">    std::raise(SIGTRAP);                                            </span>\
+<span class="pp">    std::string callstack = marian::getCallStack(/*skipLevels=*/3); </span>\
+<span class="pp">    std::cerr &lt;&lt; callstack &lt;&lt; &quot;</span><span class="er">\</span><span class="pp">n&quot;;                                 </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__PRETTY_FUNCTION__</span><span class="pp"> ;                              </span>\
+<span class="pp">    std::cerr &lt;&lt; &quot; &quot; &lt;&lt; </span><span class="ot">__FILE__</span><span class="pp"> &lt;&lt; &quot;:&quot;;                            </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__LINE__</span><span class="pp"> &lt;&lt; &quot;</span><span class="er">\</span><span class="pp">n&quot;;                                  </span>\
+<span class="pp">    op;                                                             </span>\
+<span class="pp">  }</span></code></pre></div>
+<p>I quickly realized I no longer needed the <code>SIGTRAP</code> to know which functions where getting called. Dropping it and just using <code>__PRETTY_FUNCTION__</code> information identified ops using <code>NodeOp(...)</code>.</p>
+<details> <summary> Ops (click to expand) </summary>
+<pre>
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/tensors/cpu/integer_common.h#L46">marian::cpu::integer::fetchAlphaFromModelNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L419">marian::DotBatchedNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L735">marian::GatherNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L1252">marian::HighwayNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L1200">marian::LayerNormalizationOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L450">marian::LogSoftmaxNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L728">marian::NegNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L831">marian::PlusNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L284">marian::ReLUNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_binary.h#L672">marian::RowsNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L42">marian::ScalarAddNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L100">marian::ScalarMultNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L425">marian::SoftmaxNodeOp::forwardOps()::&lt;lambda&gt;</a>() 
+<a href="https://github.com/jerinphilip/marian/blob/8c4170fa08c46df1cf4c987e493b7a3772c380b3/src/graph/node_operators_unary.h#L747">marian::TransposeNodeOp::forwardOps()::&lt;lambda&gt;</a>()
+</pre>
+<p></details></p>
+<p>The first discovered Ops were not exhaustive. There are some functions that simply use a capturing lambda and not the macro. I don’t think the authors of the macro ever intended it to be used this way. To my surprise, I discovered <code>NodeOp</code> was even <a href="https://marian-nmt.github.io/docs/api">mentioned by a documentation effort</a>. Macros are supposed to be <a href="https://stackoverflow.com/questions/14041453/why-are-preprocessor-macros-evil-and-what-are-the-alternatives">bad and evil</a> per established wisdom.</p>
+<p>If as reader, you feel that this article is jumping all around the place - know that it is an accurate reflection my mental state and uncertainty regarding the target at this point. But from here-on, I had clarity.</p>
+<h3 id="tracing-execution">Tracing execution</h3>
+<p>I’m mostly lurking and operating in the compilers intersection machine-learning space now. So far I’ve also followed the <a href="https://minitorch.github.io/">minitorch</a> tutorial twice - once in Python and once in C++ to know what a computation graph is and how to build autograd. This puts me in place with certain theory and understanding that could make life further simpler for me.</p>
+<p>All that aside, we will consider a toy language of data-types being <code>Expr</code>, indicating an expression (more specifically, the result of an expression). We can do the following with <code>Expr</code>s for an example.</p>
+<p>We’ll make a simplified definition of <code>Expr</code> as follows:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// Expr lhs = Op(rhs[0], rhs[1], ...)</span>
+<span class="kw">struct</span> Expr { 
+   <span class="dt">float</span>* value; <span class="co">// Holds underlying </span>
+   storage <span class="dt">size_t</span> size;  <span class="co">// Size of the storage, in bytes.</span>
+
+   <span class="kw">using</span> Operands = <span class="bu">std::</span>vector&lt;Expr&gt;; 
+   Operands rhs; <span class="co">// operands that populate the result value.</span>
+
+   <span class="kw">using</span> Op  = <span class="bu">std::</span>function&lt;<span class="dt">void</span>(<span class="dt">void</span>)&gt;; 
+   <span class="kw">using</span> Ops = <span class="bu">std::</span>vector&lt;Op&gt;;
+
+   Ops forward() { 
+     <span class="kw">auto</span> op = [=](){ 
+       <span class="co">// Open up rhs, apply intended function.</span>
+       <span class="co">// write to value.  </span>
+     }; 
+     <span class="cf">return</span> { op }; 
+   }
+
+   <span class="dt">float</span> *grad; <span class="co">// Same size as value, holds gradient</span>
+
+   <span class="co">// Operates on grad, after receiving gradients from Expr(s) ahead.  </span>
+   Ops backward(<span class="dt">float</span> *grad_from_successor_node);  };</code></pre></div>
+<p>Since we’re doing inference, we’re not interested in <code>backward</code> and <code>grad</code>.</p>
+<p>Consider the expression as an LHS which is obtained by some operation on the rhs operands.</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">Expr x = ones(<span class="dv">2</span>, <span class="dv">2</span>);
+Expr y = zero(<span class="dv">2</span>, <span class="dv">2</span>);
+Expr z = x + y;</code></pre></div>
+<p>Consider <code>z</code>, which is a result of <code>+</code> on <code>[x, y]</code>, <code>Expr</code> would be as follows:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">struct</span> Add: <span class="kw">public</span> Expr {
+<span class="kw">public</span>:
+  <span class="co">// ...</span>
+  Ops forward() {
+    <span class="co">// Open up rhs, apply intended function.</span>
+    <span class="co">// write to value.</span>
+    <span class="co">// x, y are available in rhs.</span>
+    Op add = [=](){
+      <span class="cf">for</span>(<span class="dt">size_t</span> i = <span class="dv">0</span>; i &lt; size; i++){
+          value[i] = rhs[<span class="dv">0</span>].value[i] + rhs[<span class="dv">1</span>].value[i];
+      }
+    };
+    <span class="cf">return</span> { add };
+  }
+};</code></pre></div>
+<p>Note that we’re only recording that so and so operations must be done using so and so storage locations - <a href="https://en.wikipedia.org/wiki/Thunk">thunks</a>. We’ve not actually executed them yet. Execution would look as follows:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// Compute loss</span>
+loss = f(rhs1, rhs2, ...);
+
+<span class="co">// Note: Topological order begins from first expr, it is the</span>
+<span class="co">// reverse-topological-order that starts with loss. </span>
+<span class="bu">std::</span>vector&lt;Expr&gt; order = topological_order(loss); 
+
+<span class="co">// Run forward ops</span>
+<span class="cf">for</span>(<span class="kw">auto</span> expr: order){
+  forward_ops = expr-&gt;forward();
+  <span class="co">// Execute functions, ends up in order of construction.</span>
+  forward_ops(); 
+}</code></pre></div>
+<p>Okay.. what’s the point of all this? Turns out <code>NodeOp</code> being used to package the thunk means I can use <code>NodeOp</code> macro to add a pre and post hook to the statements. This means by the following modification, I can inspect the values of <code>lhs</code> (value) before and after, and also inspect the state of <code>rhs</code> (operands) during the op.</p>
+<p>The modification I’m looking for looks like:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="pp">#define WrapStatementInLambda(statement)                            </span>\
+<span class="pp">  [=]() {                                                           </span>\
+<span class="pp">    // Open up and inspect value (Before op)                        </span>\
+<span class="pp">    // (Not usually required.)                                      </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    // Extra local information                                      </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__PRETTY_FUNCTION__</span><span class="pp"> ;                              </span>\
+<span class="pp">    std::cerr &lt;&lt; &quot; &quot; &lt;&lt; </span><span class="ot">__FILE__</span><span class="pp"> &lt;&lt; &quot;:&quot;;                            </span>\
+<span class="pp">    std::cerr &lt;&lt; </span><span class="ot">__LINE__</span><span class="pp"> &lt;&lt; &quot;</span><span class="er">\</span><span class="pp">n&quot;;                                  </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    // Execute the operation                                        </span>\
+<span class="pp">    // Just leave the arg to unroll statements wrapped by macro.    </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    statement;                                                      </span>\
+<span class="pp">                                                                    </span>\
+<span class="pp">    // save value (lhs), rhs[0], rhs[1] ... to disk(?)              </span>\
+<span class="pp">  }</span>
+
+
+<span class="pp">#define NodeOp(op)  WrapStatementInLambda(op)</span></code></pre></div>
+<p>The rich-version I eventually ended up using is available in <a href="https://github.com/jerinphilip/slimt/blob/main/scripts/marian-trace-gen.h">slimt/marian-trace-gen.h</a>. I was also able to extract shape metadata at runtime, some name and unique-identifier information that was stored in the values. The unique-id meant I could conditionally stop during execution based on the identifier value. The macro-modification is a one-off throwaway item, but can be refined to trace the exact final operations executed by a marian forward pass and backward-pass if need be. There were a few <code>Expr</code>s not using <code>NodeOp</code>, but were <a href="https://github.com/jerinphilip/marian/compare/dev...jerinphilip:marian:tracing">easy to tame</a>.</p>
+<p>My traces looked like below:</p>
+<div class="sourceCode"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span class="fu">file:</span><span class="at"> </span><span class="st">&quot;/home/jerin/code/bergamot-translator/3rd_party/marian-dev/src/graph/node_operators_binary.h&quot;</span>
+<span class="fu">line:</span><span class="at"> 836</span>
+<span class="fu">fn:</span><span class="at"> </span><span class="st">&quot;marian::PlusNodeOp::forwardOps()::&lt;lambda()&gt;&quot;</span>
+<span class="fu">op:</span><span class="at"> </span><span class="kw">{</span> Element(_1 = _2 + _3, val_, child(0)-&gt;val(), child(1)-&gt;val()) <span class="kw">}</span>
+<span class="fu">before:</span><span class="at"> var_45 float32 [2x8x4x4]</span>
+<span class="fu">after:</span><span class="at"> var_45 float32 [2x8x4x4] var_45-PlusNodeOp-float32_2x8x4x4-lhs.bin</span>
+<span class="fu">operands:</span><span class="at"> </span>
+  <span class="kw">-</span> var_44 float32 <span class="kw">[</span>2x8x4x4<span class="kw">]</span> var_45-PlusNodeOp-float32_2x8x4x4-rhs0-float32_2x8x4x4.bin
+  <span class="kw">-</span> var_16 float32 <span class="kw">[</span>2x1x1x4<span class="kw">]</span> var_45-PlusNodeOp-float32_2x8x4x4-rhs1-float32_2x1x1x4.bin
+
+
+<span class="fu">file:</span><span class="at"> </span><span class="st">&quot;/home/jerin/code/bergamot-translator/3rd_party/marian-dev/src/graph/node_operators_unary.h&quot;</span>
+<span class="fu">line:</span><span class="at"> 425</span>
+<span class="fu">fn:</span><span class="at"> </span><span class="st">&quot;marian::SoftmaxNodeOp::forwardOps()::&lt;lambda()&gt;&quot;</span>
+<span class="fu">op:</span><span class="at"> </span><span class="kw">{</span> Softmax(val_, child(0)-&gt;val()) <span class="kw">}</span>
+<span class="fu">before:</span><span class="at"> var_46 float32 [2x8x4x4]</span>
+<span class="fu">after:</span><span class="at"> var_46 float32 [2x8x4x4] var_46-SoftmaxNodeOp-float32_2x8x4x4-lhs.bin</span>
+<span class="fu">operands:</span><span class="at"> </span>
+  <span class="kw">-</span> var_45 float32 <span class="kw">[</span>2x8x4x4<span class="kw">]</span> var_46-SoftmaxNodeOp-float32_2x8x4x4-rhs0-float32_2x8x4x4.bin</code></pre></div>
+<p>The full execution trace is available <a href="https://gist.github.com/jerinphilip/e3ff5a29c55a554849c0e5a3ed4ca3fa">here</a>.</p>
+<p>Notice, how I had the LHS and RHS for the ops saved onto-disk under unique names. This meant I could even unit-test my ops. The trace was <em>linear</em> unlike the nested functions I’d been hopping through back and forth, context switching. The linear nature made the underlying operations easier to reason with. With some domain knowledge it’s easy to recognize the above code as the softmax in attention after addition of mask for pad-tokens.</p>
+<p>At this point, I knew what I wanted was realizable at a pace I was happy with. The problem was more or less solved inside my head. I had all the missing pieces, and a really small chance of failure. Note that I hadn’t completed the solution yet, I’ve just figured out the solution.</p>
+<h2 id="finishing-up">Finishing up</h2>
+<p>I had made the process mechanical. I traversed the trace porting code step-by-step, checking LHS and RHS tensors matched what I computed using my ported code. I built some verification convenience functions to check as I progressed as well, which looked within source as follows.</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">Tensor &amp;encoder_out = x;
+VERIFY_MATCH(encoder_out,
+             <span class="st">&quot;var_394-LayerNormalizationOp-float32_1x2x4x256-lhs.bin&quot;</span>);
+<span class="cf">return</span> <span class="va">decoder_</span>.decode(encoder_out, mask, batch.words());</code></pre></div>
+<p>I hit some hiccups at 8-bit matrix multiply using intgemm (and ruy later on) in marian. But the saved tensor input/output pairs I left for myself via the tracing helped a lot.</p>
+<p>That I was familiar with the components help speed things up a bit. Some corners were cut, but no problem - we can fix it slowly if need be. There is a lot more room or optimizations. I am currently trying my hands at compilers and parallel-programming, and weak-baselines should be opportunity to learn more things on the way.</p>
+<p>Changing <code>Node.h</code> and recompiling I’d estimate take 20+ minutes on my laptop, which is enough time to walk away elsewhere while developing tracing scripts - so the new more powerful PC helped a bit.</p>
+<p>The source-code is <a href="https://github.com/jerinphilip/slimt">made public</a> on achieving bare-minimum functionality on <code>x86_64</code>, and have <a href="https://github.com/jerinphilip/slimt/pull/2">a PR open</a> to support <code>aarch64</code>. Some code that I wrote for <a href="https://github.com/jerinphilip/MozIntGemm">ARM support for Mozilla</a> back in the day and the experience ended up helping. As of now I am aware of KDE using bergamot’s models in <a href="https://invent.kde.org/libraries/ktextaddons/-/tree/master/texttranslator/translator/plugins/bergamot">KTextAddons</a>. A refined version of this could be useful to Mozilla, who I know to be using only tiny11 models.</p>
+<p>This post mostly deals with the development process. I hope to write in the future about the actual technical and math content surrounding these models.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-kim2019research">
+<p>Young Jin Kim, Marcin Junczys-Dowmunt, Hany Hassan Awadalla, Alham Fikri Aji, Kenneth Heafield, Roman Grundkiewicz, and Nikolay Bogoychev. 2019. From research to production and back: Ludicrously fast neural machine translation. In <em>Proceedings of the 3rd workshop on neural generation and translation</em>, pages 280–288.</p>
+</div>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
     <title>Alignment manipulations for pivoting in MT</title>
     <link href="http://jerinphilip.github.io/posts/alignment-manipulations-pivoting-mt.html" />
     <id>http://jerinphilip.github.io/posts/alignment-manipulations-pivoting-mt.html</id>
@@ -74,7 +459,7 @@
          
 
          
-            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ml.html">ml</a></div>
+            <div><a href="../tags/posts/mt.html">mt</a>, <a href="../tags/posts/ml.html">ml</a>, <a href="../tags/posts/bergamot.html">bergamot</a></div>
          
     </div>
 </div>
@@ -1909,923 +2294,6 @@ index 408ce27..e30de2a 100644
 <h2 id="what-to-tinker-with-next">What to tinker with next?</h2>
 <p><strong>WSL</strong>, particularly WSL2 is very exciting for me. I have been trying to play around with <a href="https://pidgin.im/">pidgin</a> source code in my free time, hoping I can do some plugin hacking in the future. Building and modifying seems very convenient with the WSL system (unlike my past experiences with Git Bash / Cygwin / etc).</p>
 <p><strong>LaTeX builds</strong> I have been using XeLaTeX recently because I’ve had to work with Indian language scripts and the fonts, which are not natively supported by pdflatex. While trying to solve a certain problem, I have found hints that LuaLatex is perhaps a better choice in terms of build speed etc for diagrams. Maybe, when the need becomes critical or there is some free time.</p></div>
-</div>
-
-
-<div class="row">
-    <div class="col">
-        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
-    </div>
-</div>
-
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        
-<footer>
-    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
-</footer>
-
-                    </div>
-                </div>
-            </div>
-        <script type="text/javascript" src="../static/js/init.js"></script>
-    </body>
-</html>
-]]></summary>
-</entry>
-<entry>
-    <title>Multilingual Sentence Representations</title>
-    <link href="http://jerinphilip.github.io/posts/multilingual-sentence-representations.html" />
-    <id>http://jerinphilip.github.io/posts/multilingual-sentence-representations.html</id>
-    <published>2019-06-04T00:00:00Z</published>
-    <updated>2019-06-04T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta property="og:title" content="Multilingual Sentence Representations" />
-        <meta property="og:url" content="http://jerinphilip.github.io/posts/multilingual-sentence-representations.html" />
-        <title>Multilingual Sentence Representations</title>
-        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700,700i,800" rel="stylesheet">
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
-        <link rel="stylesheet" href="../static/css/tether.min.css" />
-        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="../static/css/custom.css" />
-        <link rel="stylesheet" href="../static/css/kate.css" />
-        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
-        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
-        <script type="text/javascript" src="../static/js/tether.min.js"></script>
-        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
-        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
-        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
-        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-		<!-- Global site tag (gtag.js) - Google Analytics -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-122834696-1"></script>
-		<script>
-		  window.dataLayer = window.dataLayer || [];
-		  function gtag(){dataLayer.push(arguments);}
-		  gtag('js', new Date());
-
-		  gtag('config', 'UA-122834696-1');
-		</script>
-    </head>
-    <body>
-            <div class="container">
-                <div class="row">
-                    <div class="col">
-                        <header>
-    <span><a href="../">/home/jerin</a> </span>
-    <!--
-    <span><a href="/archive.html">posts</a></span>,
-    <span><a href="/contact.html">contact</a></span>
-    -->
-</header>
-
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <h1>Multilingual Sentence Representations</h1>
-                        <div class="row mb-4">
-    <div class="post-info col">
-        <div>Jun 04, 2019</div>
-
-         
-
-         
-            <div></div>
-         
-    </div>
-</div>
-
-<div class="row">
-    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#methodology">Methodology</a><ul>
-<li><a href="#datasets-and-training">Datasets and Training</a></li>
-<li><a href="#encoded-representations">Encoded Representations</a><ul>
-<li><a href="#nearest-neighbours">Nearest Neighbours</a></li>
-<li><a href="#embedding-and-visualizing-in-lower-dimensions">Embedding and visualizing in lower-dimensions</a><ul>
-<li><a href="#target-space">Target Space</a></li>
-<li><a href="#source-language-space">Source language space</a></li>
-<li><a href="#colored-by-source-and-target">Colored by source and target</a></li>
-<li><a href="#same-concepts---different-language.">Same concepts - different language.</a></li>
-</ul></li>
-</ul></li>
-</ul></li>
-<li><a href="#literature-survey">Literature Survey</a><ul>
-<li><a href="#multilingual-translation">Multilingual Translation</a></li>
-<li><a href="#feature-extraction">Feature Extraction</a></li>
-<li><a href="#mining-parallel-pairs">Mining Parallel Pairs</a></li>
-<li><a href="#evaluations">Evaluations</a></li>
-</ul></li>
-<li><a href="#conclusion-and-future-work">Conclusion and Future Work</a></li>
-<li><a href="#references">References</a></li>
-</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p><small> This post is an experiment killed rather early while I was looking into interpretability of learned transformer representations during my Masters. The post is added to my personal blog on 2020 August 06, but the date of the original post in my blog preserved. It’s written in the fashion of somthing like a paper. A better work I found after dropping my pursuits surrounding the problem is <a href="https://research.google/pubs/pub48541/">Investigating Multilingual NMT Representations at Scale</a>, by a group in Google. </small></p>
-<h2 id="introduction">Introduction</h2>
-<p>In this work, we investigate</p>
-<ul>
-<li>Sentence representations from a multilingual neural machine translation model.</li>
-<li>We explore the possibilities of re-use and transfer of these learnt embeddings.</li>
-</ul>
-<h2 id="methodology">Methodology</h2>
-<h5 id="datasets-and-training">Datasets and Training</h5>
-<p>We train a multilingual model with joint encoder, decoder and shared embeddings between both as per <span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span> on a large compiled corpus consisting of IIT-Bombay Hindi English Parallel Corpus (IITB-hi-en) [<span class="citation">Kunchukuttan et al. (<a href="#ref-kunchukuttan2018iit">2018</a>)</span>], Indian Languages Corpora Initiative (ILCI) [<span class="citation">Jha (<a href="#ref-jha2010tdil">2010</a>)</span>], WAT-Indic Multi Parallel Corpus (WAT-ILMPC) [<span class="citation">Nakazawa et al. (<a href="#ref-nakazawa2018overview">2018</a>)</span>]. The test sets of both IITB-hi-en and WAT-ILMPC are left out of training and the evaluation scores on these are reported below. We use a compilation of validation sets from the two datasets for monitoring validation loss.</p>
-<table>
-<thead>
-<tr class="header">
-<th>srcs</th>
-<th>hi</th>
-<th>en</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>en</td>
-<td>20.46</td>
-<td>100.00</td>
-</tr>
-<tr class="even">
-<td>hi</td>
-<td>100.00</td>
-<td>22.91</td>
-</tr>
-</tbody>
-</table>
-<p>For evaluating multilingual embeddings we use the <em>Mann Ki Baat</em> dataset as an unseen dataset, and ILCI corpus from the training dataset. The details of this dataset are described in the table below. We use 3348 samples aligned across each language form <em>Mann Ki Baat</em> and 50K from ILCI corpus. The BLEU scores on <em>Mann Ki Baat</em> are provided below.</p>
-<table>
-<thead>
-<tr class="header">
-<th>srcs</th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>99.87</td>
-<td>15.20</td>
-<td>14.43</td>
-<td>8.15</td>
-<td>3.85</td>
-<td>7.35</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>9.50</td>
-<td>100.00</td>
-<td>15.37</td>
-<td>8.71</td>
-<td>4.60</td>
-<td>8.20</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>11.97</td>
-<td>21.79</td>
-<td>99.20</td>
-<td>9.09</td>
-<td>5.83</td>
-<td>9.49</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>6.85</td>
-<td>12.00</td>
-<td>9.84</td>
-<td>99.90</td>
-<td>3.37</td>
-<td>7.32</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>3.51</td>
-<td>6.92</td>
-<td>5.86</td>
-<td>4.06</td>
-<td>99.91</td>
-<td>3.63</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>6.99</td>
-<td>11.06</td>
-<td>9.54</td>
-<td>8.00</td>
-<td>3.59</td>
-<td>99.74</td>
-</tr>
-<tr class="odd">
-<td>ur</td>
-<td>0.00</td>
-<td>0.00</td>
-<td>19.55</td>
-<td>0.00</td>
-<td>0.00</td>
-<td>0.00</td>
-</tr>
-</tbody>
-</table>
-<h4 id="encoded-representations">Encoded Representations</h4>
-<p>To obtain fixed-dimensional sentence representations for a variable length input sequence, we follow <span class="citation">Zhang et al. (<a href="#ref-zhang2018learning">2018</a>)</span> to use a concatenation of max-pooled features over time and the mean across the time-steps each individually L2 normalized. Below, we detail an ablation study by varying possibilities and found that this representation gave best results. Once we reaffirm the extracted features work best among those proposed, we attempt to visualize the <em>Mann Ki Baat</em> dataset in lower dimensions to seek what properties are strong in the encoded representations at a macro scale.</p>
-<h5 id="nearest-neighbours">Nearest Neighbours</h5>
-<p>First, we attempt to analyze over the test set for a give source and target in languages <span class="math inline">\(xx\)</span>, <span class="math inline">\(yy\)</span> respectively, embeddings generated to translation to which languages <span class="math inline">\(\hat{xx}\)</span>, <span class="math inline">\(\hat{yy}\)</span> respectively works the best. To this end, we collect the embeddings from encoder representations for each source attempted to translate to a language. For each sample, we obtain the nearest neighbours in other languages using <code>faiss</code><a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> <span class="citation">(Johnson et al., <a href="#ref-johnson2019billion">2019</a>)</span>.</p>
-<p>For the above experiment, we report the overall precision@1 over each pair of languages in the table below. The columns represent the source whose language of the sample whose nearest neighbour is being retrieved. The row indicates the target language samples which are being queried. Precision is computed in the information retrieval sense as</p>
-<p><span class="math display">\[ \mathrm{p@k} = \frac{\#(\mathrm{relevant} \cap \mathrm{retrieved})}{\# \mathrm{retrieved}} \]</span></p>
-<p>A retrieval is considered relevent if it belongs to the same multilingual sample as the query.</p>
-<table>
-<caption>Precision@1 on cross-language translation retrieval. mean-max for aggregation from time-steps. Better than a random classifier at least.</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.317</td>
-<td>0.483</td>
-<td>0.306</td>
-<td>0.173</td>
-<td>0.310</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.332</td>
-<td>1.000</td>
-<td>0.471</td>
-<td>0.243</td>
-<td>0.106</td>
-<td>0.199</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td><strong>0.491</strong></td>
-<td><strong>0.513</strong></td>
-<td>1.000</td>
-<td><strong>0.344</strong></td>
-<td><strong>0.200</strong></td>
-<td><strong>0.325</strong></td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.286</td>
-<td>0.199</td>
-<td>0.292</td>
-<td>1.000</td>
-<td>0.151</td>
-<td>0.260</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.113</td>
-<td>0.071</td>
-<td>0.139</td>
-<td>0.119</td>
-<td>1.000</td>
-<td>0.118</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.271</td>
-<td>0.181</td>
-<td>0.270</td>
-<td>0.268</td>
-<td>0.153</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<p>
-<button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#ablationFeatTables" aria-expanded="false" aria-controls="ablationFeatTables">
-Why the above features are best? Expand P@1 tables for other features.
-</button>
-</p>
-<div id="ablationFeatTables" class="collapse">
-<table>
-<caption>p@1 for max-pooled features</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.236</td>
-<td>0.426</td>
-<td>0.266</td>
-<td>0.140</td>
-<td>0.256</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.245</td>
-<td>1.000</td>
-<td>0.443</td>
-<td>0.168</td>
-<td>0.075</td>
-<td>0.153</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.420</td>
-<td>0.428</td>
-<td>1.000</td>
-<td>0.270</td>
-<td>0.164</td>
-<td>0.261</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.260</td>
-<td>0.152</td>
-<td>0.255</td>
-<td>1.000</td>
-<td>0.133</td>
-<td>0.247</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.120</td>
-<td>0.067</td>
-<td>0.148</td>
-<td>0.117</td>
-<td>1.000</td>
-<td>0.122</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.246</td>
-<td>0.144</td>
-<td>0.253</td>
-<td>0.243</td>
-<td>0.134</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<table>
-<caption>p@1 for max-pooled features followed by L2-Normalization</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.110</td>
-<td>0.323</td>
-<td>0.186</td>
-<td>0.090</td>
-<td>0.186</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.168</td>
-<td>1.000</td>
-<td>0.316</td>
-<td>0.110</td>
-<td>0.046</td>
-<td>0.104</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.343</td>
-<td>0.278</td>
-<td>1.000</td>
-<td>0.202</td>
-<td>0.116</td>
-<td>0.196</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.194</td>
-<td>0.081</td>
-<td>0.193</td>
-<td>1.000</td>
-<td>0.105</td>
-<td>0.191</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.071</td>
-<td>0.027</td>
-<td>0.084</td>
-<td>0.089</td>
-<td>1.000</td>
-<td>0.088</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.164</td>
-<td>0.066</td>
-<td>0.163</td>
-<td>0.174</td>
-<td>0.097</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<table>
-<caption>p@1 for aggregated-by-mean features</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.245</td>
-<td>0.412</td>
-<td>0.246</td>
-<td>0.136</td>
-<td>0.266</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.290</td>
-<td>1.000</td>
-<td>0.409</td>
-<td>0.188</td>
-<td>0.079</td>
-<td>0.160</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.452</td>
-<td>0.447</td>
-<td>1.000</td>
-<td>0.290</td>
-<td>0.165</td>
-<td>0.284</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.259</td>
-<td>0.149</td>
-<td>0.251</td>
-<td>1.000</td>
-<td>0.125</td>
-<td>0.239</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.105</td>
-<td>0.053</td>
-<td>0.116</td>
-<td>0.099</td>
-<td>1.000</td>
-<td>0.108</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.248</td>
-<td>0.140</td>
-<td>0.240</td>
-<td>0.222</td>
-<td>0.122</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<table>
-<caption>p@1 for aggregated-by-mean features followed by L2-Normalization</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.305</td>
-<td>0.457</td>
-<td>0.280</td>
-<td>0.155</td>
-<td>0.284</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.304</td>
-<td>1.000</td>
-<td>0.433</td>
-<td>0.222</td>
-<td>0.096</td>
-<td>0.178</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.459</td>
-<td>0.489</td>
-<td>1.000</td>
-<td>0.317</td>
-<td>0.180</td>
-<td>0.299</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.263</td>
-<td>0.188</td>
-<td>0.272</td>
-<td>1.000</td>
-<td>0.133</td>
-<td>0.234</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.103</td>
-<td>0.070</td>
-<td>0.128</td>
-<td>0.104</td>
-<td>1.000</td>
-<td>0.106</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.251</td>
-<td>0.172</td>
-<td>0.253</td>
-<td>0.244</td>
-<td>0.135</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<table>
-<caption>p@1 for concatenated mean and max features</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.290</td>
-<td>0.479</td>
-<td>0.300</td>
-<td>0.170</td>
-<td>0.299</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.307</td>
-<td>1.000</td>
-<td>0.497</td>
-<td>0.213</td>
-<td>0.100</td>
-<td>0.192</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.471</td>
-<td>0.488</td>
-<td>1.000</td>
-<td>0.313</td>
-<td>0.200</td>
-<td>0.303</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.299</td>
-<td>0.189</td>
-<td>0.299</td>
-<td>1.000</td>
-<td>0.152</td>
-<td>0.281</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.144</td>
-<td>0.085</td>
-<td>0.176</td>
-<td>0.132</td>
-<td>1.000</td>
-<td>0.138</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.286</td>
-<td>0.184</td>
-<td>0.295</td>
-<td>0.274</td>
-<td>0.157</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<table>
-<caption>p@1 for concatenated mean and max features followed by L2 Normalization</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>1.000</td>
-<td>0.152</td>
-<td>0.388</td>
-<td>0.234</td>
-<td>0.123</td>
-<td>0.238</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.234</td>
-<td>1.000</td>
-<td>0.378</td>
-<td>0.155</td>
-<td>0.062</td>
-<td>0.141</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.411</td>
-<td>0.355</td>
-<td>1.000</td>
-<td>0.257</td>
-<td>0.150</td>
-<td>0.253</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.246</td>
-<td>0.115</td>
-<td>0.241</td>
-<td>1.000</td>
-<td>0.134</td>
-<td>0.237</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.094</td>
-<td>0.037</td>
-<td>0.107</td>
-<td>0.107</td>
-<td>1.000</td>
-<td>0.107</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.213</td>
-<td>0.091</td>
-<td>0.205</td>
-<td>0.215</td>
-<td>0.122</td>
-<td>1.000</td>
-</tr>
-</tbody>
-</table>
-<table>
-<caption>Precision@5 on cross-language translation retrieval. mean-max for aggregation from time-steps. Is this indicative of anything?</caption>
-<thead>
-<tr class="header">
-<th></th>
-<th>bn</th>
-<th>en</th>
-<th>hi</th>
-<th>ml</th>
-<th>ta</th>
-<th>te</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>bn</td>
-<td>0.285</td>
-<td>0.110</td>
-<td>0.144</td>
-<td>0.103</td>
-<td>0.057</td>
-<td>0.091</td>
-</tr>
-<tr class="even">
-<td>en</td>
-<td>0.109</td>
-<td>0.362</td>
-<td>0.151</td>
-<td>0.092</td>
-<td>0.044</td>
-<td>0.072</td>
-</tr>
-<tr class="odd">
-<td>hi</td>
-<td>0.143</td>
-<td>0.144</td>
-<td>0.309</td>
-<td>0.108</td>
-<td>0.067</td>
-<td>0.092</td>
-</tr>
-<tr class="even">
-<td>ml</td>
-<td>0.098</td>
-<td>0.077</td>
-<td>0.089</td>
-<td>0.298</td>
-<td>0.050</td>
-<td>0.079</td>
-</tr>
-<tr class="odd">
-<td>ta</td>
-<td>0.042</td>
-<td>0.032</td>
-<td>0.050</td>
-<td>0.041</td>
-<td>0.259</td>
-<td>0.038</td>
-</tr>
-<tr class="even">
-<td>te</td>
-<td>0.091</td>
-<td>0.070</td>
-<td>0.084</td>
-<td>0.085</td>
-<td>0.052</td>
-<td>0.284</td>
-</tr>
-</tbody>
-</table>
-</div>
-<p><small>(But the above is among very little samples. Perhaps I should index with larger representations, to well establish the <em>Mann Ki Baat</em> ones still come close.)</small></p>
-<h5 id="embedding-and-visualizing-in-lower-dimensions">Embedding and visualizing in lower-dimensions</h5>
-<p>In the below images, we illustrate the lower-dimension projections using t-SNE of the sentence embeddings from <em>Mann Ki Baat</em> dataset. We first do a PCA to reduce the dimensions to 20, followed by t-SNE on 2-dimensions.</p>
-<p>The representations are built from multilingual samples of <em>Mann Ki Baat</em>, each entry having attributes identified by the unique tuple source, target and sample-id. Multiple language samples of the same content are indexed by same sample-id.To observe which axis among these forms the grouping which make most sense - we fix a few, while keeing the others varying.</p>
-<p>Note that our methods of embedding to a 2D space of all samples are unsupervised. We proceed to color the resulting datapoints according to the labels extracted as source, target, sample-id and combinations of the same.</p>
-<h6 id="target-space">Target Space</h6>
-<p>In the first case, we color the projections using the target language attribute.</p>
-<p><a href="../static/images/multilingual-embeddings/xx-t2const.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2const.png" class="img-fluid"> </a></p>
-<p>The best grouping is obtained on the target space, implying each the encoder representations group same target language samples together. The results are in agreement with the findings of <span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span>. We’ve possibly learnt the hard way that these sentence representations aren’t that reusable for vector space comparisons as cross lingual retrieval mechanisms. Another interesting thing to note here is that each representations contain the same shapes for all languages.</p>
-<p><small> (TODO: This could suggest that there exists a matrix which can be obtained by solving the Procustes problem similar to <span class="citation">Lample et al. (<a href="#ref-lample2018word">2018</a>)</span> to get a rotation matrix. Update: Google’s submission did SVCCA, which might be more apt a choice.) </small></p>
-<h6 id="source-language-space">Source language space</h6>
-<p><a href="../static/images/multilingual-embeddings/const-t2xx.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/const-t2xx.png" class="img-fluid"> </a></p>
-<p>The source language boundaries still form some subclusters, although not as the target. For a better look, we try to view the source samples embedded for a fixed target language. Given below are encoded representations while attempting to translate to English and Hindi as indicated in the graphs below.</p>
-<div class="row">
-<div class="col-6">
-<p><a href="../static/images/multilingual-embeddings/xx-t2en.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2en.png" class="img-fluid"> </a></p>
-</div>
-<div class="col-6">
-<p><a href="../static/images/multilingual-embeddings/xx-t2hi.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2hi.png" class="img-fluid"> </a></p>
-</div>
-</div>
-<p>It’s observable above that <code>en-t2en</code> directly maps to <code>hi-t2hi</code> and <code>en-t2hi</code> somehow is similar to <code>hi-t2en</code>. But the samples not being overlayed on top of each other is still a problem, as attempts to translate to a single language isn’t likely to produce robust embeddings for cross-lingual sentence representations.</p>
-<h6 id="colored-by-source-and-target">Colored by source and target</h6>
-<p><a href="../static/images/multilingual-embeddings/xx-t2yy.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/xx-t2yy.png" class="img-fluid"> </a></p>
-<p>The above is a more fine-grained view of the clusters, considering <code>src-tgt</code> as the labels and coloring accordingly.</p>
-<h6 id="same-concepts---different-language.">Same concepts - different language.</h6>
-<p>Next, we encode all sentences to translate to Hindi (<code>xx-t2hi</code>). Since here points are closer in terms of source language rather than similarity in meaning or content, we can conclude that even at a microscopic scale, we’ll need further refinements to use these embeddings as multilingual sentence representations.</p>
-<p><a href="../static/images/multilingual-embeddings/multilingual-samples.png" data-toggle="lightbox"> <img src="../static/images/multilingual-embeddings/multilingual-samples.png" class="img-fluid"></p>
-<p></a></p>
-<p>Above, we check if multilingual closeness exists, and turns out it doesn’t. English and Hindi seems to have their own close spaces, while the others are a bit cluttered. This also seems to correlate with the size of data we have in each languages, the degree of intra-language closeness and inter-language separation. Perhaps once the data matches up in other languages, we could see how this evolves.</p>
-<!--
-#### Metric Learning for better representations
-
-\[TODO\]
-
-#### Evaluations/Benchmarking
-
-We use the encoder representations to train a network for the
-Hindi-English natural language inference task in @conneau2018xnli. This
-lets us benchmark the remaining results bridging to other numbers in
-literature.
--->
-<h2 id="literature-survey">Literature Survey</h2>
-<h6 id="multilingual-translation">Multilingual Translation</h6>
-<p><span class="citation">Johnson et al. (<a href="#ref-johnson2017google">2017</a>)</span> introduced Multilingual Neural Machine Translation switching target language based on a token prepended to the input sequence. This simple method demonstrated major improvements and zero-shot capability in translation. If the parameters of the encoder and decoder and respective embeddings are shared among all languages, a consequence is that the encoder outputs become cross-lingual representations of the concept in the source language.</p>
-<h6 id="feature-extraction">Feature Extraction</h6>
-<p><span class="citation">Zhang et al. (<a href="#ref-zhang2018learning">2018</a>)</span> adapts the encoder architecture from the transformer model proposed by <span class="citation">Vaswani et al. (<a href="#ref-vaswani2017attention">2017</a>)</span> as sentence representation learning models. They however investigate the utility through downstream tasks constructing the sentence-representations through an autoencoding objective on the sentences. <span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span> uses max-pooled features across timesteps, which seems to be working out well for their use cases.</p>
-<h6 id="mining-parallel-pairs">Mining Parallel Pairs</h6>
-<p>Past works in multilingual mining have made significant use of representations arising out of translation task [<span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span>, <span class="citation">Schwenk (<a href="#ref-schwenk2018filtering">2018</a>)</span>, <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019margin">2019</a><a href="#ref-artetxe2019margin">a</a>)</span>, <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span>]. Since mining is enabled by the ability to query a sample in the vector space induced by translation, most of these work becomes relevant to the likes of cross-lingual sentence embeddings.</p>
-<p><span class="citation">Schwenk and Douze (<a href="#ref-schwenk2017learning">2017</a>)</span> proposes the following desired properties: (i) multilingual closeness, (ii) semantic closeness, (iii) preservation of content, (iv) scalability to many languages. <span class="citation">Schwenk (<a href="#ref-schwenk2018filtering">2018</a>)</span> uses cosine similarity, for the same representation and applies it to the BUCC task. They conclude the distance can be used in confidence estimation or to filter backtranslations. <span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019margin">2019</a><a href="#ref-artetxe2019margin">a</a>)</span> strips the encoder inputs off source or target language information, having embeddings corresponding to target fed to the decoder instead, thereby providing “encoded-representations” of the sequence in a common space.</p>
-<ul>
-<li><small>The error rates reported are low. Quite unsure if our embeddings on <em>Mann Ki Baat</em> matches up to this degree. The nearest neighbour retrieval precision presented before as proxy supports this. Uses vanilla seq2seq NMT models (possibly <span class="citation">Bahdanau et al. (<a href="#ref-bahdanau2014neural">2014</a>)</span> or <span class="citation">Luong et al. (<a href="#ref-luong2015effective">2015</a>)</span>).</small></li>
-<li><small>It may perhaps be interesting to look at the t-SNE dynamics of this modified network.</small></li>
-</ul>
-<h6 id="evaluations">Evaluations</h6>
-<p>The XNLI Dataset [<span class="citation">Conneau et al. (<a href="#ref-conneau2018xnli">2018</a>)</span>] seems to be used by people in the community for benchmarking multiingual embeddings [<span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span>]. Hindi (<code>hi</code>) seems to be the only reported Indian Language in the testing set.</p>
-<p>Often, mining parallel text from news corpus and training a translation system to obtain better BLEU seems to be an assertion in favour of better mining methods. If the representations are robust and performing well, this could indicate their success.</p>
-<h2 id="conclusion-and-future-work">Conclusion and Future Work</h2>
-<p><span class="citation">Artetxe and Schwenk (<a href="#ref-artetxe2019massively">2019</a><a href="#ref-artetxe2019massively">b</a>)</span> seems to be a good way to go to generate sentence embeddings, but requires training from scratch and some modifications to <code>pytorch/fairseq</code>.</p>
-<h2 id="references" class="unnumbered">References</h2>
-<div id="refs" class="references">
-<div id="ref-artetxe2019margin">
-<p>Mikel Artetxe and Holger Schwenk. 2019a. Margin-based parallel corpus mining with multilingual sentence embeddings. In <em>Proceedings of the 57th annual meeting of the association for computational linguistics</em>, pages 3197–3203.</p>
-</div>
-<div id="ref-artetxe2019massively">
-<p>Mikel Artetxe and Holger Schwenk. 2019b. Massively multilingual sentence embeddings for zero-shot cross-lingual transfer and beyond. <em>Transactions of the Association for Computational Linguistics</em>, 7:597–610.</p>
-</div>
-<div id="ref-bahdanau2014neural">
-<p>Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio. 2014. Neural machine translation by jointly learning to align and translate. <em>arXiv preprint arXiv:1409.0473</em>.</p>
-</div>
-<div id="ref-conneau2018xnli">
-<p>Alexis Conneau, Ruty Rinott, Guillaume Lample, Adina Williams, Samuel Bowman, Holger Schwenk, and Veselin Stoyanov. 2018. XNLI: Evaluating cross-lingual sentence representations. In <em>Proceedings of the 2018 conference on empirical methods in natural language processing</em>, pages 2475–2485.</p>
-</div>
-<div id="ref-jha2010tdil">
-<p>Girish Nath Jha. 2010. The TDIL Program and the Indian Language Corpora Intitiative (ILCI). In <em>LREC</em>.</p>
-</div>
-<div id="ref-johnson2019billion">
-<p>Jeff Johnson, Matthijs Douze, and Hervé Jégou. 2019. Billion-scale similarity search with gpus. <em>IEEE Transactions on Big Data</em>.</p>
-</div>
-<div id="ref-johnson2017google">
-<p>Melvin Johnson, Mike Schuster, Quoc V Le, Maxim Krikun, Yonghui Wu, Zhifeng Chen, Nikhil Thorat, Fernanda Viégas, Martin Wattenberg, Greg Corrado, and others. 2017. Google’s multilingual neural machine translation system: Enabling zero-shot translation. <em>Transactions of the Association for Computational Linguistics</em>, 5:339–351.</p>
-</div>
-<div id="ref-kunchukuttan2018iit">
-<p>Anoop Kunchukuttan, Pratik Mehta, and Pushpak Bhattacharyya. 2018. The IIT Bombay English-Hindi Parallel Corpus. In <em>Proceedings of the eleventh international conference on language resources and evaluation (lrec-2018)</em>.</p>
-</div>
-<div id="ref-lample2018word">
-<p>Guillaume Lample, Alexis Conneau, Marc’Aurelio Ranzato, Ludovic Denoyer, and Hervé Jégou. 2018. Word translation without parallel data. In <em>International conference on learning representations</em>.</p>
-</div>
-<div id="ref-luong2015effective">
-<p>Minh-Thang Luong, Hieu Pham, and Christopher D Manning. 2015. Effective approaches to attention-based neural machine translation. <em>arXiv preprint arXiv:1508.04025</em>.</p>
-</div>
-<div id="ref-nakazawa2018overview">
-<p>Toshiaki Nakazawa, Katsuhito Sudoh, Shohei Higashiyama, Chenchen Ding, Raj Dabre, Hideya Mino, Isao Goto, Win Pa Pa, Anoop Kunchukuttan, and Sadao Kurohashi. 2018. Overview of the 5th workshop on asian translation. In <em>Proceedings of the 5th workshop on asian translation (wat2018)</em>.</p>
-</div>
-<div id="ref-schwenk2018filtering">
-<p>Holger Schwenk. 2018. Filtering and mining parallel data in a joint multilingual space. In <em>Proceedings of the 56th annual meeting of the association for computational linguistics (volume 2: Short papers)</em>, pages 228–234.</p>
-</div>
-<div id="ref-schwenk2017learning">
-<p>Holger Schwenk and Matthijs Douze. 2017. Learning joint multilingual sentence representations with neural machine translation. In <em>Proceedings of the 2nd workshop on representation learning for nlp</em>, pages 157–167.</p>
-</div>
-<div id="ref-vaswani2017attention">
-<p>Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In <em>Advances in neural information processing systems</em>, pages 5998–6008.</p>
-</div>
-<div id="ref-zhang2018learning">
-<p>Minghua Zhang, Yunfang Wu, Weigang Li, and Wei Li. 2018. Learning universal sentence representations with mean-max attention autoencoder. In <em>Proceedings of the 2018 conference on empirical methods in natural language processing</em>, pages 4514–4523.</p>
-</div>
-</div>
-<div class="footnotes">
-<hr />
-<ol>
-<li id="fn1"><p><a href="https://github.com/facebookresearch/faiss">github.com/facebookresearch/faiss</a><a href="#fnref1">↩</a></p></li>
-</ol>
-</div></div>
 </div>
 
 
