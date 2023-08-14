@@ -251,7 +251,8 @@ Item(encoder_l1_self_Wk_QuantMultA, float32, Shape([<span class="dv">1</span>, <
    <span class="dt">float</span> *grad; <span class="co">// Same size as value, holds gradient</span>
 
    <span class="co">// Operates on grad, after receiving gradients from Expr(s) ahead.  </span>
-   Ops backward(<span class="dt">float</span> *grad_from_successor_node);  };</code></pre></div>
+   Ops backward(<span class="dt">float</span> *grad_from_successor_node);  
+};</code></pre></div>
 <p>An abstraction like <code>Expr</code> forms the basis for autograd frameworks. Since we’re tracing the inference path, we’re not interested in <code>backward</code> and <code>grad</code>.</p>
 <p>Consider the expression as an LHS which is obtained by some operation on the rhs operands.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">Expr x = ones(<span class="dv">2</span>, <span class="dv">2</span>);
