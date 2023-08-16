@@ -39,7 +39,7 @@
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -418,7 +418,7 @@ VERIFY_MATCH(encoder_out,
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -787,7 +787,7 @@ illa illa=0.993525
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -999,7 +999,7 @@ M = \max \{ x_i \}
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -1134,7 +1134,7 @@ Mon Jun 12 14:26:03 2023
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -1345,7 +1345,7 @@ Mon Jun 12 14:26:03 2023
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -1559,7 +1559,7 @@ $ <span class="fu">cmake</span> <span class="va">$BUILD_DIRECTORY</span>        
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -1736,7 +1736,7 @@ encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -1931,7 +1931,7 @@ encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
@@ -2139,7 +2139,7 @@ index 408ce27..e30de2a 100644
         <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
         <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
         <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
     </head>
     <body>
             <div class="container">
