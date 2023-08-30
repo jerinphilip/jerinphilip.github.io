@@ -8,8 +8,199 @@
         <name>Jerin Philip</name>
         <email>jerinphilip@live.in</email>
     </author>
-    <updated>2023-08-12T00:00:00Z</updated>
+    <updated>2023-08-24T00:00:00Z</updated>
     <entry>
+    <title>Diagramming</title>
+    <link href="http://jerinphilip.github.io/posts/diagramming.html" />
+    <id>http://jerinphilip.github.io/posts/diagramming.html</id>
+    <published>2023-08-24T00:00:00Z</published>
+    <updated>2023-08-24T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Diagramming" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/diagramming.html" />
+        <title>Diagramming</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link rel="stylesheet" href="../static/css/hack.css" />
+        <link rel="stylesheet" href="../static/css/open-sans.css">
+        <link rel="stylesheet" href="../static/css/font-awesome.min.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Diagramming</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Aug 24, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/diagrams.html">diagrams</a>, <a href="../tags/posts/chalk.html">chalk</a>, <a href="../tags/posts/python.html">python</a>, <a href="../tags/posts/viz.html">viz</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#toolbox">Toolbox</a></li>
+<li><a href="#what-suits-my-usage">What suits my usage?</a></li>
+<li><a href="#chalk-etudes">chalk etudes</a><ul>
+<li><a href="#colors">Colors</a></li>
+<li><a href="#translation">Translation</a></li>
+<li><a href="#llvm-module">LLVM Module</a></li>
+<li><a href="#torch-mlir">Torch MLIR</a></li>
+</ul></li>
+<li><a href="#concluding-thoughts">Concluding thoughts</a></li>
+<li><a href="#references">References</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>Over research spanning nearly 5+ years and programming spanning a decade, I’ve always remained curious and interested in diagrams. My interest, I think is mostly due to the fact that I’m a strong visual learner. It is very likely I have some learning impairment over audio, or that visual learning is, to me much easier and I want to short-circuit through that route. Consequently I find myself drawn to papers, articles or web-pages that <em>illustrate</em> an idea. See below for some illustrations I go wow over:</p>
+<ul>
+<li><a href="http://blog.ezyang.com/2019/05/pytorch-internals/">Edward Yang: PyTorch Internals</a></li>
+<li><a href="https://siboehm.com/articles/22/CUDA-MMM">Simon Boehm: <em>How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance: a Worklog</em></a></li>
+<li><a href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/ELF_Executable_and_Linkable_Format_diagram_by_Ange_Albertini.png/1600px-ELF_Executable_and_Linkable_Format_diagram_by_Ange_Albertini.png">Wikipedia: ELF Executable and Linkable Format</a></li>
+<li><a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">Alexander Rush: The Annotated Transformer</a></li>
+<li><a href="https://minitorch.github.io/">Alexander Rush: Minitorch series</a></li>
+<li>Christopher Olah:
+<ul>
+<li><a href="https://distill.pub/">distill.pub</a></li>
+<li><a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">Understanding LSTM Networks</a>, and most of his blog.</li>
+</ul></li>
+<li><a href="http://hendrik.strobelt.com/">Hendrik Strobelt</a>: Papers and demos.</li>
+<li><a href="https://jvns.ca/teach-tech-with-cartoons/">Julia Evans: Teach Tech with cartoons</a></li>
+</ul>
+<p>Converging on a set of tools to visualize things with the polished finish that I desire has been ongoing. Usually, making figures or diagrams are secondary to the main task in hand that generates revenue or reward. This is one reason I haven’t had allocated time or resources to improve this dimension in a while. Where these interest and skills I have and nurture best synergized in the past when I had to make diagrams for publications. I hope to revitalize, continue keeping these skills sharp and useful through posts here.</p>
+<h2 id="toolbox">Toolbox</h2>
+<p>I have encountered and tried several tools over the years. To enumerate a few notable among these:</p>
+<ol style="list-style-type: decimal">
+<li>Presentation Software: PowerPoint, <a href="https://slides.google.com">Google Slides</a></li>
+<li>Drawing software: <a href="https://xournal.sourceforge.net/">Xournal</a> / <a href="https://xournalpp.github.io/">Xournalpp</a></li>
+<li>Declarative:
+<ol style="list-style-type: lower-alpha">
+<li><a href="https://graphviz.org/">GraphViz</a>, the dot language.</li>
+<li><a href="https://archives.haskell.org/projects.haskell.org/diagrams/gallery.html">Diagrams</a>, a haskell library.</li>
+<li><a href="https://github.com/chalk-diagrams/chalk">chalk</a>: A python port of diagrams.</li>
+<li><a href="http://mermaid.js.org/">Mermaid</a>: Embedded in markdown</li>
+<li><a href="https://www.overleaf.com/learn/latex/Pgfplots_package">pgfplots</a>: LaTeX</li>
+</ol></li>
+<li>Embedding in web-pages: <a href="http://mermaid.js.org/">d3.js</a></li>
+<li>Vector Graphics:
+<ol style="list-style-type: lower-alpha">
+<li><a href="https://inkscape.org/">Inkscape</a></li>
+<li><a href="https://excalidraw.com/">Excalidraw</a></li>
+<li><a href="https://draw.io">draw.io</a></li>
+</ol></li>
+</ol>
+<p>Note that the above are different from <em>plotting</em>, for plotting I prefer <em>matplotlib</em> with some <a href="https://github.com/jbmouret/matplotlib_for_papers">custom theming</a>, d3.js for web-pages. Feel like trying <a href="https://observablehq.com/">Observable</a> at some point of time.</p>
+<h2 id="what-suits-my-usage">What suits my usage?</h2>
+<p>It’s unlikely that there is a <em>one size fits all</em> choice. I bin my usages into four categories and explain the reasoning behind my choices below:</p>
+<p><strong>Whiteboarding</strong> Sometimes I just want to quick and dirty discuss a concept to a colleague or someone over call. The quality of the figure is not important - the legibility is. The more dimensions I can add (2D, 3D, color) and more primitives I have to work with (freehand pen/paper vs palette with shape primitives). I find <a href="https://xournalpp.github.io/">Xournalpp</a> most convenient here. To be honest any decent drawing application would do - <a href="https://jamboard.google.com/?pli=1">Jamboard</a> during google-meets, <a href="https://apps.microsoft.com/store/detail/microsoft-whiteboard/9MSPC6MP8FM4?hl=en-in&amp;gl=in&amp;rtc=1">Whiteboard</a> on Windows. What actually makes life easy here for me is a pen/canvas equivalent, and higher order primitives. I own a basic Wacom - <a href="https://www.amazon.in/Wacom-CTL-472-6-inch-3-5-inch-Graphic/dp/B078HRR1XV">Wacom CTL 472</a>. An iPad + Pencil would be a decent addition, I think. But I already have a thin laptop and the tablet which suffices, so I never ended up splurging on the iPad. In real-life, at physical meetings a whiteboard with some colored marker pens I have often found convenient in the past.</p>
+<p><strong>Web, with animations</strong> I have used <em>d3.js</em> in the past and will find myself picking it up again should the need arises. Animation and dynamic user-interaction is an extra dimension to visualization. I have used the interactivity in the past to inspect translations better than I would be able to do manually on a text-file or pasting these over slides - see <a href="https://jerinphilip.github.io/d3-sandbox/exps/bleu-compare/">bleu-compare</a> for an example. More d3 experiments are present in <a href="https://jerinphilip.github.io/d3-sandbox/">d3-sandbox</a>, feel free to have a look. The diagrams for <a href="../posts/alignment-manipulations-pivoting-mt.html">alignment manipulations</a> is generated by code using <em>d3.js</em>, repurposed from a distill publication.</p>
+<p><strong>Publication Grade</strong> One downside of hand-drawings is that they don’t scale well. Vector Graphics however, does. And this is a good to have (I’d claim a <em>necessity</em>) to make polished diagrams. There is usually not much interactivity in diagrams that go on venues that accept papers. My strong preference here used to be inkscape. I have used presentation software for quick and okay before, but inkspace has a nice set of defaults, provides finer control. I am trying to replace this process with <a href="https://github.com/chalk-diagrams/chalk">chalk</a>, followed by manual refining with inkscape.</p>
+<p><strong>Programmatic Generation</strong> The above section discusses making static diagrams. Sometimes, this is not a luxury when the diagram is made from a lot of nodes (clusters, computation-graphs, call-graphs). Mostly because layouting can no longer be done manually, and manual command over everything no longer remains an advantage. When it comes to such tasks - I prefer <em>GraphViz</em>’s automatic layouting, or force layout from <code>d3.js</code>. These usually rarely go into papers, sometimes work for web-demos.</p>
+<p>The rest of this post is me trying declarative drawing by a combination of chalk-diagrams and possible refinement through inkscape - trying to learn and practice my new preferred tooling.</p>
+<h2 id="chalk-etudes">chalk etudes</h2>
+<p>Inspired by <a href="https://github.com/norvig/pytudes">pytudes</a>, which in turn is inspired by <a href="https://books.google.com/books/about/Etudes_for_programmers.html?id=u89WAAAAMAAJ">Etudes for Programmers</a> by <a href="https://books.google.com/books/about/Etudes_for_programmers.html?id=u89WAAAAMAAJ">Charles Wetherell</a>, I’m going to set out to try and practice making diagrams. Bunch of them are for future blogposts here. Some just for fun to push the limits.</p>
+<h3 id="colors">Colors</h3>
+<p>To get some good colors for the boxes which forms diagrams, I need some good color-sets. I’m going to pull it from matplotlib - mostly the <a href="https://matplotlib.org/stable/tutorials/colors/colormaps.html#qualitative">qualitative sets</a>. To verify that the color values pulled render properly, all I had to to do was <code>hcat</code> a few colors and <code>vcat</code> the sets.</p>
+<p><img src="../static/images/diagram-etudes/qualitative.svg" width="100%" /></p>
+<p>The <em>qualitative</em> colors palette allows for this post to be a little more colorful than usual.</p>
+<h3 id="translation">Translation</h3>
+<p>I have spent nearly 5 years working adjacent to machine translation. Find below a trip down memory lane touching a few concepts, also intended for a future blogpost.</p>
+<p><strong>Encoder Decoder</strong> Below is a more complex rendering via <em>chalk</em> of a sequence-to-sequence translation process diagram. Color palette pulled before helps make it look nicer, or so I claim.</p>
+<p><img src="../static/images/diagram-etudes/encdec.svg" width="100%" /></p>
+<p>There are repeating elements in this diagram - the decoding process. The code to generate this is a simple for-loop, which is one of the things I like about <em>chalk</em> over inkspace. I can loop to reuse repeating elements, and also control the spacing and positioning to a more exact degree. Usually working with presentation software or inkspace there are the following options that have to be used a lot:</p>
+<ol style="list-style-type: decimal">
+<li>Align - Left, Right, Top, Bottom</li>
+<li>Distribute - Horizontally, Vertically.</li>
+</ol>
+<p>Moving things around manually sometimes feel repetitive. I chalk, the control over positioning feels like an improvement.</p>
+<p><strong>RNNs</strong> There are nice illustrations of variants of RNN by <a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">Chris Olah</a>, that I used to read. I found these very useful when getting started with deep-learning. Below I reproduce two.</p>
+<p>The following denotes the time-series unroll of a recurrent neural network.</p>
+<p><img src="../static/images/diagram-etudes/rnn_steps.svg" width="100%" /></p>
+<p>There are not many elements to loop over, but it’s noticable how this unroll can also be specified by a loop.</p>
+<p><strong>Simpler Simple Recurrent Units</strong> I’m not going to redo the existing RNN diagrams. Instead, I render a variant that does not probably have a diagram anywhere to be found online, but is used in models I have worked with for <a href="https://github.com/browsermt/students">Bergamot Project</a>. The equations are available in <span class="citation">Kim et al. (<a href="#ref-kim2019research">2019</a>)</span>.</p>
+<p><img src="../static/images/diagram-etudes/ssru.svg" width="100%" /></p>
+<p><strong>Attention</strong> The landmark paper <em>Attention is all you need</em> paper (<span class="citation">Vaswani et al. (<a href="#ref-vaswani2017attention">2017</a>)</span>) has two or three nice diagrams. Find <em>Scaled Dot Product Attention</em> (SDPA) and <em>MultiHead Attention</em> (MHA) below, reproduced similar to the rendering in the paper.</p>
+<p><img src="../static/images/diagram-etudes/sdpa.svg" width="30%" /> <img src="../static/images/diagram-etudes/mha.svg" width="69%" /></p>
+<p>The diagrams are not an exact match, but gets close surprisingly fast. I found adding depth (heads) and configuring same kind of elements together as a whole more convenient than how I would’ve done it in inkscape.</p>
+<h3 id="llvm-module">LLVM Module</h3>
+<p>I have been trying to read up on compilers space. Sometime back, while reading LLVM, watching videos and <a href="https://github.com/jerinphilip/kaleidoscope/">implementing parts</a> of <a href="https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html"><em>Kaleidoscope</em></a>, the toy compiler, I went on a detour to <a href="https://github.com/jerinphilip/kaleidoscope/blob/a3f941dd1d7d3e79bdd11e7744b290531571114c/scripts/diagrams.py">experiment with a chalk-diagram</a> for <a href="https://youtu.be/m8G_S5LwlTo?t=305">a slide</a> I encountered from an LLVM Talk: <a href="https://youtu.be/m8G_S5LwlTo">2019 EuroLLVM Developers’ Meeting: V. Bridgers &amp; F. Piovezan “LLVM IR Tutorial - Phis, GEPs …”</a></p>
+<p><img src="../static/images/diagram-etudes/llvm_skeleton.svg" width="100%" /></p>
+<p>Colors could’ve been better, but I did manage to render this fast, which got me hooked on <em>chalk</em> in the first place. Now that we’re here on a bigger blogpost, sharing the origin story seems nice.</p>
+<h3 id="torch-mlir">Torch MLIR</h3>
+<p>I found <a href="https://github.com/llvm/torch-mlir/blob/main/docs/images/architecture.png">this diagram</a> while reading up on torch-mlir. Few more elements - <em>dashed lines</em>, aligned text on both sides. An attempt to replicate using chalk-diagrams got me as far as below:</p>
+<p><img src="../static/images/diagram-etudes/torch_mlir_arch.svg" width="60%" /></p>
+<h2 id="concluding-thoughts">Concluding thoughts</h2>
+<p>For those who want to take a further dive - please find the source at <a href="https://github.com/jerinphilip/chalk-gallery/">jerinphilip/chalk-gallery</a>. The source is not in the best of states - I’m learning a new library, so best-practices are still iterations away. Excuse the poor quality, I will not let <em>perfect</em> be the enemy of <em>publishing</em>. I will keep the etudes section of this post a live document, and update it with future rendering practices.</p>
+<p>I think the <a href="https://en.wikipedia.org/wiki/Kolmogorov_complexity">Kolgomorov complexity</a> for an output diagram like the ones above (which are created using repetition) will be minimal in a programming language - in this case, Python. It’s going to be better than SVG, and therefore using inkscape. The reasoning that follows is that I will be more productive and better equipped here in comparison to inkscape, once I get past the learning curve.</p>
+<p>Expect more additions and cleanups to <a href="https://github.com/jerinphilip/chalk-gallery/">jerinphilip/chalk-gallery</a> along with more posts in this blog coming ahead!</p>
+<h2 id="references">References</h2>
+<p><a href="https://anvaka.github.io/sj/compare/">Imperative vs Declarative drawing API</a></p>
+<div id="refs" class="references">
+<div id="ref-kim2019research">
+<p>Young Jin Kim, Marcin Junczys-Dowmunt, Hany Hassan Awadalla, Alham Fikri Aji, Kenneth Heafield, Roman Grundkiewicz, and Nikolay Bogoychev. 2019. From research to production and back: Ludicrously fast neural machine translation. In <em>Proceedings of the 3rd workshop on neural generation and translation</em>, pages 280–288.</p>
+</div>
+<div id="ref-vaswani2017attention">
+<p>Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In <em>Advances in neural information processing systems</em>, pages 5998–6008.</p>
+</div>
+</div></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
     <title>slimt: Making of</title>
     <link href="http://jerinphilip.github.io/posts/making-of-slimt.html" />
     <id>http://jerinphilip.github.io/posts/making-of-slimt.html</id>
@@ -2082,131 +2273,6 @@ index 408ce27..e30de2a 100644
 <p>Shashank Siripragada, Jerin Philip, Vinay P. Namboodiri, and C V Jawahar. 2020. A multilingual parallel corpora collection effort for Indian languages. In <em>Proceedings of the 12th language resources and evaluation conference</em>, pages 3743–3751, Marseille, France, May. European Language Resources Association.</p>
 </div>
 </div></div>
-</div>
-
-
-<div class="row">
-    <div class="col">
-        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
-    </div>
-</div>
-
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        
-<footer>
-    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
-</footer>
-
-                    </div>
-                </div>
-            </div>
-        <script type="text/javascript" src="../static/js/init.js"></script>
-    </body>
-</html>
-]]></summary>
-</entry>
-<entry>
-    <title>TeX environment thoughts</title>
-    <link href="http://jerinphilip.github.io/posts/latex-build-system.html" />
-    <id>http://jerinphilip.github.io/posts/latex-build-system.html</id>
-    <published>2020-05-10T00:00:00Z</published>
-    <updated>2020-05-10T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta property="og:title" content="TeX environment thoughts" />
-        <meta property="og:url" content="http://jerinphilip.github.io/posts/latex-build-system.html" />
-        <title>TeX environment thoughts</title>
-        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
-        <link rel="stylesheet" href="../static/css/hack.css" />
-        <link rel="stylesheet" href="../static/css/open-sans.css">
-        <link rel="stylesheet" href="../static/css/font-awesome.min.css">
-        <link rel="stylesheet" href="../static/css/tether.min.css" />
-        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="../static/css/custom.css" />
-        <link rel="stylesheet" href="../static/css/kate.css" />
-        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
-        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
-        <script type="text/javascript" src="../static/js/tether.min.js"></script>
-        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
-        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
-        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
-        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-    </head>
-    <body>
-            <div class="container">
-                <div class="row">
-                    <div class="col">
-                        <header>
-    <span><a href="../">/home/jerin</a> </span>
-    <!--
-    <span><a href="/archive.html">posts</a></span>,
-    <span><a href="/contact.html">contact</a></span>
-    -->
-</header>
-
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <h1>TeX environment thoughts</h1>
-                        <div class="row mb-4">
-    <div class="post-info col">
-        <div>May 10, 2020</div>
-
-         
-
-         
-            <div></div>
-         
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-8 col-sm-12"><h2 id="overleaf-vs-local-environment">Overleaf vs Local environment</h2>
-<p>Overleaf has been very convenient to collaborate with other people while writing/reviewing scientific papers. I write scientific papers in Latex, which means the source can be treated like code, and versioning be enabled. I like git and the <a href="https://xkcd.com/1597/">superpowers</a> that come with it. In an ideal setting, I’d have the full git repository with branches and versioning with my collaborators. But it’s almost unlikely that I find such people and unnecessary overhead is added to the process. Luckily OverLeaf offers a neat bridge with git enabled versioning, which solves a lot of my problems.</p>
-<p>So my typical paper-writing workflow is:</p>
-<ol style="list-style-type: decimal">
-<li>Start a project on OverLeaf,</li>
-<li>do a git-pull to the local machine</li>
-<li>Create a remote and push on a GitHub repository, because I like keeping reviews and comments as issues over there and track changes in source in the web UI.</li>
-<li>Add a Makefile so local builds are easy and possible.</li>
-<li>Use vim and evince to create an overleaf-y environment to edit locally.</li>
-</ol>
-<p>Keeping a few copies also lets you continue work in the unlikely event of an overleaf outage, or internet outage - which can happen.</p>
-<h2 id="the-pros-and-cons">The Pros and Cons</h2>
-<p>OverLeaf doesn’t allow full history access unless you are a premium user. Premium however is rather expensive, when I’m already skilled to use the versioning tools for software to track history. Not much of a plus, but I commit my changes, so I usually know which changes came from who.</p>
-<p>Sometimes people tend to mess-up documents and be clueless what went wrong (like an unbalanced paranthesis somewhere etc), then spend a fair amount of timing fixing this. It’s usually very easy to check the diffs instead, and overleaf’s UI and history access isn’t particularly the most useful when it comes to all these. It also helps me to quickly know what changes my advisors have made, so I don’t retouch them to go around in circles.</p>
-<p>I have been asked by a few why I don’t use something GUI like TexMaker. Perhaps I’m just too attached to vim. There are certain use-cases in vim, especially while working with latex-source or navigating the text fast which simply is very straightforward in vim. Here are a bunch of those:</p>
-<ol style="list-style-type: decimal">
-<li><a href="https://vim.fandom.com/wiki/Jumping_to_previously_visited_locations">jump-lists</a></li>
-<li><a href="https://github.com/godlygeek/tabular">Tabular.vim</a></li>
-<li>Indentation of math, etc which is possible in vim.</li>
-<li>I can <code>\include{...}</code> files and use <code>C-w-g-f</code> (Control-window-go-to-file) to open the file quickly in a new tab.</li>
-</ol>
-<p>Moving around files is especially useful, when the nature of your document is more book-like (a thesis, which I’m trying to wrap up soon) and the flat structure of the usual paper-template is not perhaps what you begin and proceed with.</p>
-<p>Not having <a href="https://www.tug.org/TUGboat/tb29-3/tb93laurens.pdf">SyncTex</a> is kind of a bummer, but not really a problem to me, as it has failed several times for me and is not something that I would like to get used to.</p>
-<h2 id="windows-adaptation">Windows adaptation</h2>
-<p>The above setting is very straightforward while in a Linux ecosystem. Previously I was a heavy user of Linux distributions (Ubuntu, ArchLinux), which made all the trickery convenient. But this year I decided to make my life simpler about the time I got a new laptop, a ThinkPad X1 Carbon (Generation 7). It came pre-loaded with Windows 10 and I had heard good reviews from Aditya about the Windows Subsystem for Linux (WSL). WSL2 gave me decent start on Windows (I’d totally recommend it, I’ve been trying advanced things with it and it works decent enough).</p>
-<p>I don’t need to say much here, because once you have WSL2 it’s almost the same as how you would do this on Linux.</p>
-<p>Adobe Reader opened the PDF to edit (not read-only), which made rebuilding the PDF throw errors. I solved the first issue by installing evince from <a href="https://www.fosshub.com/Evince.html">here</a>. Opens read-only and is good enough to work with. (Also, windows apps can be neatly launched from bash-shell inside WSL. I simply added a symlink to the <code>.exe</code> which lauches evince.</p>
-<h2 id="latexmk">LatexMk</h2>
-<p>I discovered Latexmk (I know, bit late) and had to rework the usual <code>Makefile</code> to enable the same. Below is the Makefile using latexmk that I use.</p>
-<script src="https://gist.github.com/jerinphilip/c9360753ba498546df707b23fdfe3207.js"></script>
-<p>I lifted somewhere from the internet, the author I can’t seem to track now. There is a modification to build to a directory, with <code>JOBNAME</code>.</p>
-<p>To use evince as the default pdf viewing tool, you might possibly want to edit your <code>~/.latexmkrc</code> with the following line:</p>
-<div class="sourceCode"><pre class="sourceCode php"><code class="sourceCode php"><span class="kw">$pdf_previewer</span> = <span class="st">'evince'</span><span class="ot">;</span></code></pre></div>
-<h2 id="what-to-tinker-with-next">What to tinker with next?</h2>
-<p><strong>WSL</strong>, particularly WSL2 is very exciting for me. I have been trying to play around with <a href="https://pidgin.im/">pidgin</a> source code in my free time, hoping I can do some plugin hacking in the future. Building and modifying seems very convenient with the WSL system (unlike my past experiences with Git Bash / Cygwin / etc).</p>
-<p><strong>LaTeX builds</strong> I have been using XeLaTeX recently because I’ve had to work with Indian language scripts and the fonts, which are not natively supported by pdflatex. While trying to solve a certain problem, I have found hints that LuaLatex is perhaps a better choice in terms of build speed etc for diagrams. Maybe, when the need becomes critical or there is some free time.</p></div>
 </div>
 
 
