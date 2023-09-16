@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Smartphone hacking baby-steps" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/smartphone-hacking.html" />
+        <title>Smartphone hacking baby-steps</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link rel="stylesheet" href="../static/css/hack.css" />
+        <link rel="stylesheet" href="../static/css/open-sans.css">
+        <link rel="stylesheet" href="../static/css/font-awesome.min.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>Smartphone hacking baby-steps</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Sep 13, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/android.html">android</a>, <a href="../tags/posts/linux.html">linux</a>, <a href="../tags/posts/postmarketos.html">postmarketos</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#tecno-pova-3">Tecno Pova 3</a><ul>
+<li><a href="#removing-bloatware">Removing bloatware</a></li>
+<li><a href="#unlocking-bootloader">Unlocking bootloader</a></li>
+<li><a href="#backups">Backups</a></li>
+<li><a href="#lineageos">LineageOS?</a></li>
+<li><a href="#postmarketos-appeal">PostmarketOS appeal</a></li>
+</ul></li>
+<li><a href="#xiaomi-redmi-6">Xiaomi Redmi 6</a><ul>
+<li><a href="#unlocking-bootloader-1">Unlocking bootloader</a></li>
+<li><a href="#backups-1">Backups</a></li>
+<li><a href="#building-postmarketos">Building PostmarketOS</a><ul>
+<li><a href="#extracting-kconfig">Extracting Kconfig</a></li>
+<li><a href="#steps">Steps</a></li>
+<li><a href="#flashing-boot.img">Flashing <code>boot.img</code></a></li>
+</ul></li>
+<li><a href="#revenge-of-the-bootloader">Revenge of the bootloader</a></li>
+</ul></li>
+<li><a href="#restore">Restore</a></li>
+<li><a href="#next-steps">Next steps</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>I have been wanting to get into deeper smartphone hacking for a while. Time and enough spare-devices lying around that I could risk bricking that making it viable had to wait until now.</p>
+<p>I purchased my first Smartphone in 2011 or so - it was a tiny <a href="https://www.gsmarena.com/htc_wildfire_s-3777.php">HTC Wildfire S</a>. I think I used it for about 2-3 years or so until I had to abandon it for a more reliable phone when I moved to college. Android at the time was increasing hardware requirements every release, the Wildfire hit its limits quite fast. In order to squeeze some juice out of it I ended up having to flash custom ROMs. If memory serves me right, I successfully flashed a <a href="https://www.clockworkmod.com/">Clockworkmod recovery</a> followed by a Cyanogenmod ROM through a <code>.zip</code> from the recovery. This happened circa 2012-2013. Back then, I was a consumer of what enthusiast people over at <a href="https://forum.xda-developers.com/">XDA</a> did. My uncle had a <a href="https://www.gsmarena.com/nokia_n8-3252.php">Nokia N8</a>, which I would help load multimedia content etc for. But it was painfully obvious Android will take over soon-enough, at least against N8’s <a href="https://en.wikipedia.org/wiki/Symbian">Symbian</a>. I vaguely remember modding the Xperia ZR that I had after the HTC Wildfire S. The strategy so far has been to wait till warranty expires, then do rooting and custom ROMs.</p>
+<p>So - this time on, I’m less of a noob considering smartphone hacking. Some operating-system theory and sysadmin practical knowledge over the years equips me to be further <a href="https://drewdevault.com/2018/03/17/Hack-everything-without-fear.html">fearless</a>. The hacker who inspired courage efforts has since <a href="https://drewdevault.com/2023/06/16/Mobile-linux-retrospective.html">thrown in the towel for mobile linux</a>. For the right reasons - I expect significant pain at figuring out the lower-level details that could alternatively be solved spending money instead of time.</p>
+<p>One eventual goal is to become a producer in this ecosystem, than just a consumer. Working devices I have in hand currently are a <a href="https://www.gsmarena.com/xiaomi_redmi_6-9237.php">Xiaomi Redmi 6</a> and a <a href="https://www.gsmarena.com/tecno_pova_3-11553.php">Tecno Pova 3</a>. One is an old-abandoned device, the other my daily driver at the moment. I have no plans to use Redmi 6 except for development - can even risk hard-bricking it. So, onward.</p>
+<h2 id="tecno-pova-3">Tecno Pova 3</h2>
+<p>The Tecno phone in my possession was an experimental buy. This is a 2022 release, and probably didn’t sell well in the Indian market. I googled for phones with maximum battery capacity (7000 mAh) and discovered this Phone. I had the funds to buy a Pixel if I wanted this time, but then I also thought - I can experiment with a mid-range phone, new manufacturer and swap to a Motorola which usually offers less adultered android in case the experiment does not pan out.</p>
+<p>Looking back, I did read and ignore warnings about higher ads and bloatware on the Tecno HiOS, which I can confirm now to be true. Then, without much research, I thought I’ll flash LineageOS to get rid of HiOS and have something clean. Successful LineageOS install is proving to be more difficult than I expected, due to Original Equipment Manufacturer (OEM) kernel not being available.</p>
+<h3 id="removing-bloatware">Removing bloatware</h3>
+<p>I discovered some minimally invasive ideas to remove bloatware from the Tecno Pova 3. Android offers slightly better control without having to flip warranty-breaking switches these days, looks like. Makes sense to exhaust these ideas first.</p>
+<p>I started off attempting things from a bunch of YouTube videos of folks describing how they got less ad-ridden phones. The process essentially boils down to:</p>
+<ol style="list-style-type: decimal">
+<li>Find <code>com.transsion.*</code> apps. <a href="https://play.google.com/store/apps/details?id=com.csdroid.pkg&amp;hl=en&amp;gl=US&amp;pli=1">Package Name Viewer</a> is an option.</li>
+<li>Find suspicious apps that we are possibly okay without.
+<ol style="list-style-type: lower-alpha">
+<li>Clear cache/data for the app.<br />
+</li>
+<li>Disable (via Android)</li>
+<li>Disallow overlays (to prevent banner ads)</li>
+<li>Disable Network Access.</li>
+</ol></li>
+<li>There are non <code>com.transsion.</code> apps as well, offending apps can be found on the internet.</li>
+</ol>
+<p>These despite promising, did not work in the end. The offending apps were turning settings back on. It’s interesting that this cat-and-mouse game between manufacturer - end-user is still on.</p>
+<p>Thankfully, there are still some <code>adb</code> options available. I tried the straightforward way:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">adb</span> uninstall com.transsion.smartpanel
+<span class="ex">Failure</span> [DELETE_FAILED_INTERNAL_ERROR]
+$ <span class="ex">adb</span> uninstall com.transsion.tecnospot
+<span class="ex">Failure</span> [DELETE_FAILED_INTERNAL_ERROR]</code></pre></div>
+<p>There are however, some advanced techniques people recommend over on Q&amp;A sites and forums:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="op">&gt;</span> <span class="ex">adb</span> shell
+
+<span class="ex">TECNO-LF7</span>:/ $ pm list packages
+<span class="ex">package</span>:com.google.android.networkstack.tethering
+<span class="ex">package</span>:com.hilauncherconfig
+<span class="ex">package</span>:com.google.android.ext.services
+<span class="ex">package</span>:com.google.android.googlequicksearchbox
+<span class="ex">...</span>
+<span class="ex">package</span>:com.transsion.bluetooth
+<span class="ex">package</span>:com.talpa.hiservice
+<span class="ex">package</span>:com.transsion.phonemaster
+<span class="ex">...</span>
+
+<span class="ex">TECNO-LF7</span>:/ $ pm uninstall --user 0 tech.palm.id
+<span class="ex">TECNO-LF7</span>:/ $ pm uninstall --user 0 com.zaz.translat
+<span class="ex">TECNO-LF7</span>:/ $ pm uninstall --user 0 com.transsnet.store
+<span class="ex">...</span></code></pre></div>
+<p>This appears to be working, so mission accomplished, I suppose. I can of-course try and take this further - to get LineageOS, near vanilla android, with much better control.</p>
+<h3 id="unlocking-bootloader">Unlocking bootloader</h3>
+<p>The first steps towards doing customization these days is unlocking the bootloader. The boot-process is multi-staged and has some verification mechanisms built in. In it’s essence, this is check the hash of the partitions that are involved in the next stage of the boot. Unlocking typically means to tell the software to not check for the hash at some point, so we can boot a partition different from what the vendor packaged.</p>
+<p>This was not that hard on the Tecno Pova 3 (LF7). The device comes with <code>fastboot</code>. And all it takes is a command in <code>fastboot</code>.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">fastboot</span> flashing unlock</code></pre></div>
+<p>One banking application has since been unhappy with the tampering and refuse to open, they were probably only using <code>WebView</code> to display their web-backend anyway, so meh - will directly use it from Firefox.</p>
+<h3 id="backups">Backups</h3>
+<p>Having a backup of whatever is in the storage gives some courage to try crazier stuff. This is because if something goes wrong in the non-critical parts, it is possible to just write back whatever existed before to get the functional phone back. I figure there are multiple methods to create such a backup.</p>
+<p>The System-on-Chip (SoC) on this phone is MediaTek MT6768/MT6769 (Helio P65/G85 k68v1). The Redmi 6 in my possession also has a MediaTek SoC. I have found MediaTek has some nice tooling - <a href="https://spflashtool.com/">SPFlash tool</a>, and a popular <a href="https://github.com/bkerler/mtkclient"><code>mtkclient</code></a>.</p>
+<p>I tried using <code>mtkclient</code>, but it appears I am not able find much success at least for now. I tried a non-invasive <code>printgpt</code> and <code>dump bootrom</code>, but somehow the exploits do not seem to work on the device.</p>
+<p><details> <summary><code>mtk printgpt</code></summary></p>
+<pre><code>Port - Hint:
+
+Power off the phone before connecting.
+For brom mode, press and hold vol up, vol dwn, or all hw buttons and connect usb.
+For preloader mode, don't press any hw button and connect usb.
+If it is already connected and on, hold power for 10 seconds to reset.
+
+
+......Port - Device detected :)
+Preloader - 	CPU:			MT6768/MT6769(Helio P65/G85 k68v1)
+Preloader - 	HW version:		0x0
+Preloader - 	WDT:			0x10007000
+Preloader - 	Uart:			0x11002000
+Preloader - 	Brom payload addr:	0x100a00
+Preloader - 	DA payload addr:	0x201000
+Preloader - 	CQ_DMA addr:		0x10212000
+Preloader - 	Var1:			0x25
+Preloader - Disabling Watchdog...
+Preloader - HW code:			0x707
+Preloader - Target config:		0x5
+Preloader - 	SBC enabled:		True
+Preloader - 	SLA enabled:		False
+Preloader - 	DAA enabled:		True
+Preloader - 	SWJTAG enabled:		True
+Preloader - 	EPP_PARAM at 0x600 after EMMC_BOOT/SDMMC_BOOT:	False
+Preloader - 	Root cert required:	False
+Preloader - 	Mem read auth:		False
+Preloader - 	Mem write auth:		False
+Preloader - 	Cmd 0xC8 blocked:	False
+Preloader - Get Target info
+Preloader - 	HW subcode:		0x8a00
+Preloader - 	HW Ver:			0xca00
+Preloader - 	SW Ver:			0x0
+Mtk - We're not in bootrom, trying to crash da...
+Exploitation - Crashing da...
+Preloader
+Preloader - [LIB]: upload_data failed with error: DAA_SIG_VERIFY_FAILED (0x7024)
+Preloader
+Preloader - [LIB]: Error on uploading da data
+Preloader - Jumping to 0x0
+Preloader - Status: Waiting for PreLoader VCOM, please connect mobile
+
+Port - Hint:
+
+Power off the phone before connecting.
+For brom mode, press and hold vol up, vol dwn, or all hw buttons and connect usb.
+For preloader mode, don't press any hw button and connect usb.
+If it is already connected and on, hold power for 10 seconds to reset.
+
+
+..........Preloader
+Preloader - [LIB]: Status: Handshake failed, retrying...
+</code></pre>
+<p></details></p>
+<p>While the <code>mtkclient</code> efforts are intended to take backups, one idea is to eventually extract the <code>boot.img</code> etc which allows to use <a href="https://github.com/twrpdtgen/twrpdtgen">twrpdtgen</a> to extract the device-tree. It will also allow me to unpack the <code>boot.img</code> to find the <code>KConfig</code> used to compile the kernel. I do not have the source-code, but more clues are hopefully there to find a close relative of a phone. It should also be possible to use the pre-compiled kernel to power a not-so-nice LineageOS installation, I am told.</p>
+<p>For now, I’m stuck. I’m trying to correpond with the <code>mtkclient</code> library author for some help at <a href="https://github.com/bkerler/mtkclient/issues/778">bkerler/mtkclient#778</a>. What appears to be more popular - the <a href="https://spflashtool.com/">SPFlashTool</a> requires Windows, I don’t have an installation at the moment.</p>
+<p>The Tecno Pova 3 is more usable and less intrusive due to ads now, so I have some degree of success in gaining further control over my device.</p>
+<h3 id="lineageos">LineageOS?</h3>
+<p>I spent some time in the LineageOS channel trying to setup AOSP a few months back. I tried the basic setup and things - my new machine could compile LineageOS code quite fast. One of the requirements from the LineageOS communities appeared to be the OEM kernel sources. Knowing about the <a href="https://source.android.com/docs/core/architecture/kernel/generic-kernel-image">Generic Kernel Image</a> (GKI) Project could have helped. However, my phone, despite being recent I think shipped with a <code>4.x</code> kernel (GKI applies to devices launching with <code>&gt; 5.4</code>). I find myself at the mercy of the vendor, and when they eventually release the sources.</p>
+<p>Let’s hope some open-sourcing eventually happens, I’ll prepare a bit in any case.</p>
+<h3 id="postmarketos-appeal">PostmarketOS appeal</h3>
+<p>If the device-manufacturer, in my case, <a href="https://www.transsion.com/">Transsion</a> - <a href="https://www.tecno-mobile.in">Tecno</a>, does not provide OEM Kernel sources in open-violation of the GPL, the idea of <a href="https://wiki.postmarketos.org/wiki/Mainlining"><em>mainlining</em></a> suddenly becomes attractive. I’m being naive and optimistic here, as the Tecno phone also has hardware that are unique (front camera LED, Fingerprint sensor) and a newer chip not available in mainline (MT6768/MT6769). The mainline kernel would add support across devices, so if someone else using same SoC releases kernel sources I might be able to use it to boot at least. Telephony and specialized hardware would be far behind still.</p>
+<p>Now, porting to a new device walkthrough mentions requiring the downstream kernel <a href="https://wiki.postmarketos.org/wiki/Porting_to_a_new_device#Source_code">source-code</a>. Since I don’t have it for the Pova 3, might as well start with the Xiaomi. This is under an optimistic assumption that eventually I should be able to unlock the bootloader. I expect a few hurdles in compiling the kernel with Postmarket infrastructure, and me learning the parts - so let’s clear that to begin with.</p>
+<h2 id="xiaomi-redmi-6">Xiaomi Redmi 6</h2>
+<p>Xiaomi Redmi 6 (codename <code>cereus</code>) appears to have been ported to LineageOS and in <a href="https://stats.lineageos.org/model/cereus">use</a>. Makes sense, because Xiaomi has open-sourced the kernel. The following are available online:</p>
+<ol style="list-style-type: decimal">
+<li><a href="https://github.com/MiCode/Xiaomi_Kernel_OpenSource/tree/cactus-o-oss">Xiaomi_Kernel_OpenSource@cactus-o-oss</a></li>
+<li><a href="https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765">xiaomi-mt6765/android_kernel_xiaomi_mt6765</a>
+<ol style="list-style-type: lower-alpha">
+<li><a href="https://github.com/jerinphilip/android_kernel_xiaomi_mt6765">jerinphilip/android_kernel_xiaomi_mt6765</a></li>
+</ol></li>
+</ol>
+<p>Building LineageOS should be possible. Some high-end machines could help ease the compile, and I have one. PostmarketOS is recent and I’ve been wanting to try out for fun. There are some overlaps in the communities in terms of skill, resources required and possibly enthusiasts.</p>
+<p>For a change, I will try how PostmarketOS sees things. The <a href="https://wiki.postmarketos.org/wiki/Porting_to_a_new_device">PostmarkertOS Wiki</a> appears far better and developer-oriented and the community much more welcoming to noob questions on Matrix/IRC.</p>
+<h3 id="unlocking-bootloader-1">Unlocking bootloader</h3>
+<p>As we saw before during the inspection and backup efforts for the Pova, <code>mtkclient</code> provides a friendly interface to unlock the bootloader across a wide variety of devices with MediaTek SoCs. Redmi 6 is an old phone, and the chip appears to be well supported.</p>
+<p>I ran through the instructions in <a href="https://github.com/bkerler/mtkclient#unlock-bootloader">bkerler/mtkclient#unlock-bootloader</a>. Things appear to be going well, on the surface.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk printgpt 
+$ <span class="ex">python</span> mtk e metadata,userdata 
+$ <span class="ex">python</span> mtk da seccfg unlock
+$ <span class="ex">python</span> mtk reset</code></pre></div>
+<h3 id="backups-1">Backups</h3>
+<p>Since PostmarketOS installation process will write to <code>boot.img</code> and <code>system.img</code>, sensible thing to do is to take backups in case something goes wrong. It’s risky to use stock-firware found in arbitrary websites on the internet.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk printgpt</code></pre></div>
+<p>This reveals the <code>boot</code>, <code>system</code> and <code>vbmeta</code> partitions (at least). It’s safe to take backups of other partitions as well, just in case. Storage is cheap. But not <code>userdata</code> and <code>cache</code>, that can be wiped and cleaned without risk. These are where data is stored, so it’ll take longer to back this up over the USB-2.0 connection (nearly 4 hours compared to 15 minutes on my setup).</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="va">PARTITIONS=(</span>
+    <span class="ex">boot</span>
+    <span class="ex">vbmeta</span>
+    <span class="ex">system</span>
+)
+
+<span class="fu">mkdir</span> -p export
+<span class="kw">for</span> <span class="ex">partition</span> in <span class="va">${PARTITIONS[@]}</span><span class="kw">;</span> <span class="kw">do</span>
+    <span class="ex">python</span> mtk r <span class="va">$partition</span> export/<span class="va">$partition</span>.img
+<span class="kw">done</span>;</code></pre></div>
+<h3 id="building-postmarketos">Building PostmarketOS</h3>
+<p>The PostmarketOS ecosystem was nicer than I expected it to be - wiki, tooling, matrix channels. I used <code>pmbootstrap</code> to initialize a workspace, new device port according to the instructions.</p>
+<h4 id="extracting-kconfig">Extracting Kconfig</h4>
+<p>Being a newbie, I started from some config I found in the public source-repository - <a href="https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765">xiaomi-mt6765/android_kernel_xiaomi_mt6765</a> and tried to play around until I got compilation to work. But there is a better way. Given I have <code>mtkclient</code> working for the Redmi 6, I can use it to extract the <code>boot.img</code> partition, and from the compiled kernel the <code>config</code> used to compile. Somebody in <a href="https://matrix.to/#/#porting:postmarketos.org">#porting:postmarketos.org</a> helped me out soon as I supplied the <code>boot.img</code>, for the sake of completeness and my own learning I redo the steps below:</p>
+<p><a href="https://github.com/torvalds/linux/blob/master/scripts/extract-ikconfig">extract-ikconfig</a>, a utility available in the linux repository enable inspecting the kernel for the config it was compiled with.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">extract-ikconfig</span> export/boot.img <span class="op">&gt;</span> export/config.linux-xiaomi-cereus.armv7</code></pre></div>
+<h4 id="steps">Steps</h4>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">pmbootstrap</span> init
+$ <span class="ex">pmbootstrap</span> checksum device-xiaomi-cereus
+$ <span class="ex">pmbootstrap</span> checksum linux-xiaomi-cereus
+$ <span class="ex">pmbootstrap</span> kconfig check
+$ <span class="ex">pmbootstrap</span> kconfig edit
+$ <span class="ex">pmbootstrap</span> build linux-xiaomi-cereus
+$ <span class="ex">pmbootstrap</span> install</code></pre></div>
+<h4 id="flashing-boot.img">Flashing <code>boot.img</code></h4>
+<p>To check it suffices to flash <code>boot.img</code> - i.e, overwrite the <code>/boot</code> partition with the generated <code>boot.img</code>.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk w boot /path/to/boot/boot.img</code></pre></div>
+<p>Fingers crossed.</p>
+<h3 id="revenge-of-the-bootloader">Revenge of the bootloader</h3>
+<p>I powered-up the device. The device started vibrating funny, and long. One person helping me out in the channel hypothesised this could be a positive, since the kernel was designed to light and LED or vibrate indicating it booted. This raised my spirits, but only for a short while. Sadly, turns out I never enabled these hooks - which meant something was <em>very, very wrong</em>.</p>
+<p>The standard check is to connect to USB and see if the device is getting recognized:</p>
+<pre><code>[246083.382812] usb 1-3: new high-speed USB device number 42 using xhci_hcd
+[246083.523263] usb 1-3: New USB device found, idVendor=0e8d, idProduct=0003, bcdDevice= 1.00
+[246083.523285] usb 1-3: New USB device strings: Mfr=0, Product=0, SerialNumber=0
+[246083.526879] cdc_acm 1-3:1.0: ttyACM0: USB ACM device</code></pre>
+<p>This is just MediaTek stuff, nothing regarding the device.</p>
+<p>Find the visuals of the phone vibrating:</p>
+<iframe width="315" height="560" src="https://www.youtube.com/embed/1JD8ANESalg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen>
+</iframe>
+<p>This was obviously bad, but silver lining is room for learning more nuances. MediaTek SoCs write the boot logs to a partition called <code>expdb.bin</code>. In order to inspect the <code>expdb.bin</code> without any contaminations from prior boots, I was told I had to first erase it by writing out 0s.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk e expdb
+$ <span class="ex">python</span> mtk reset</code></pre></div>
+<p>Now I booted again to see the phone vibrate. Then I got it into bootrom once again. Time to inspect the logs.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk r expd expdb.bin</code></pre></div>
+<p>Poking a bit further, produce the logs to the experts and I got pointed to the offending parts causing the kernel to panic below:</p>
+<pre><code>[67] [LK] fdt setup addr:0x47880000 status:0!!!
+[67] setup_fdt fail, ret: 0x0!
+[67] real mdtbo index=0
+[69] fdt_open_into failed 
+[69] [SEC_POLICY] reached the end, use default policy
+[69] [SEC_POLICY] sboot_state = 0x1
+[69] [SEC_POLICY] lock_state = 0x3
+[70] [SBC] image dconfig-dt auth init fail (0x6003)
+[70] dconfig image cert verify failed
+[70] panic (caller 0x48022b8f): ASSERT at (app/mt_boot/bootargs.c:96): fdt_bootargs</code></pre>
+<p><code>fdt</code> stands for <em>flattened device tree</em>. This the device tree blob (<code>dtb</code>) and the device tree blob overlay (<code>dtbo</code>) combined. Therefore the bootloader is complaining about something to do with the <code>dtb</code>. I guess the hardware was configured to vibrate in case of an inability to boot.</p>
+<p>One suggested way to solve this problem was to get the <code>dtb</code> from the working device and swap-in. However, I had a feeling was this was due to some misconfiguration in the <code>KConfig</code> where I remembered having to make a few more changes than necessary to compile this kernel. I tracked down the problem - I was working with an <code>aarch64</code> config instead of an <code>armv7</code> config, I figured since <a href="https://en.wikichip.org/wiki/mediatek/helio/p22">MT6762</a> supported <code>aarch64</code>, that would be the architecture to compile for - turns out I was wrong.</p>
+<p>Having found the root of the problem, I changed the config to <code>armv7</code>, generated a fresh <code>boot.img</code>. Ready for the moment-of-truth.</p>
+<div class="row">
+<div class="col-md-6 col-sm-12">
+<p><img src="../static/images/cereus-system-has-been-destroyed.jpg" width="100%"></p>
+</div>
+</div>
+<p>oops!</p>
+<p>Inspecting the <a href="http://ix.io/4GcA">logs</a> this time, we find:</p>
+<pre><code>[618] [PROFILE] ::: lvl(2) logo verify takes 53 ms
+[618] [SEC_POLICY] reached the end, use default policy
+[619] [SEC_POLICY] sboot_state = 0x1
+[619] [SEC_POLICY] lock_state = 0x3
+....
+[926] RSA_padding_check_PKCS1_type_1 failed ret:-1
+[926] token sig decrypt failed:-2
+...
+[935] [SEC_POLICY] sboot_state = 0x1
+[935] [SEC_POLICY] lock_state = 0x4
+[935] [avb] img_auth_required = 1
+[936] avb_slot_verify.c[936] :[936] 637[936] : ERROR: 
+[936] vbmeta[936] : Error verifying vbmeta image: [936] OK_NOT_SIGNED[936] 
+[936] [avb] boot/recovery vfy time = 6 ms
+[936] mblock_create mblock start b9b70000 size: 6400000
+[936] [avb] avb_ret = 3
+[937] [LK] check_ota_result = 0
+[937] [LK] ota-fail
+[937] fb dump: 0xff000000, 0xff000000, 0xff000000, 0xff000000
+dm-verity error
+
+
+Android system on your device is corrupted.
+
+Device will boot in %ds
+
+[5939] boot state: red
+[5939] fb dump: 0xff000000, 0xff000000, 0xff000000, 0xff000000
+Red State</code></pre>
+<p>The villain of the Redmi 6 story is the bootloader. Xiaomi has insane protections surrounding bootloader unlock. You are supposed to be using the <a href="https://en.miui.com/unlock/download_en.html">official unlock tool</a>, which works on Windows only. It should be able to support Linux, there are actually a few clients - <a href="https://github.com/francescotescari/XiaoMiToolV2">francescotescari/XiaoMiToolV2</a>, <a href="https://github.com/RohitVerma882/termux-miunlock">RohitVerma882/termux-miunlock</a>.</p>
+<p>The Redmi has an account tied to a SIM card that’s not mine. I can access the SIM required from time-to-time, but this makes it tricky to use the Xiaomi official tooling. I figured if there’s some MediaTek generic angles via <code>mtkclient</code>, perhaps that would work?</p>
+<p>I was wrong. A deeper search revealed the following issue:</p>
+<ul>
+<li><a href="https://github.com/bkerler/mtkclient/issues/110">bkerler/mtkclient#110</a>: redmi 6a unlock succees but remain lock</li>
+</ul>
+<p>I have for now <a href="https://github.com/bkerler/mtkclient/issues/110#issuecomment-1716787319">requested</a> further information.</p>
+<p>Judging by existing comments, turns out there’s some mechanism to ensure a unique Xiaomi key unlocks it. I hope I can solve this eventually with the official unlock tool, and if that doesn’t work maybe even try my hands at riskier exploits that could hard-brick the device.</p>
+<p>I tried my luck at unlocking use the stock firmware and the <a href="https://en.miui.com/unlock/index.html">official method</a> - the phone never ended up getting recognized on the Windows machine I was trying with.</p>
+<p>I managed to use <a href="https://github.com/RohitVerma882/termux-miunlock">termux-unlock</a> at least partially after corresponding with the author (on Linux), I was missing the OTG cable for the two-phone trick. Eventually I got a 512 length unlock-key that I can use, so I’m saving it.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">6540246522D9A2C8EB...</code></pre></div>
+<p>I wrote it into a binary-file to try <code>fastboot stage</code>.</p>
+<pre><code>$ xxd token.bin 
+00000000: 6540 2465 22d9 a2c8 eba3 89ce a2a7 a7ac  e@$e&quot;...........
+00000010: f52d 43ff 10fc cb2c fced 2cc7 2cfb 13f7  .-C....,..,.,...
+00000020: 658b cbce 9987 cad7 c311 9574 5937 23e2  e..........tY7#.
+00000030: e8cb 5ae9 9319 8e76 55fc 0718 b7c6 a10a  ..Z....vU.......
+00000040: 3d3a 7eb5 67de a47e 77fa b0b3 d63b 14c1  =:~.g..~w....;..
+00000050: dd7a b400 af79 3c5f 429d 1bdd c53b bf0b  .z...y&lt;_B....;..
+00000060: d9a5 a2d5 a30b 047d 3f4e 6bc3 e6b0 b0cf  .......}?Nk.....
+00000070: b016 abfb 6e3d d457 08f0 afca 5700 4dfa  ....n=.W....W.M.
+00000080: cdf0 fa5d 4857 6461 5d88 7fca dd25 6200  ...]HWda]....%b.
+00000090: d219 4064 6285 57dc 80cd 0dee 9ca0 bf59  ..@db.W........Y
+000000a0: d01a 48d3 e3df fa81 a65f 3ed7 00ba 7798  ..H......_&gt;...w.
+000000b0: 6d2f 8f49 640d 262e b13b 1abc 006b b4dc  m/.Id.&amp;..;...k..
+000000c0: 8dcb 187b cdb4 a4e0 050e 228d bede 3597  ...{......&quot;...5.
+000000d0: 5646 c1ad b4d7 f006 1e74 30ba a444 579e  VF.......t0..DW.
+000000e0: 9fa8 de74 eb4a 705b 705c e362 3393 78b9  ...t.Jp[p\.b3.x.
+000000f0: 0a5c d72f aa5d 0d77 a2fd 62eb 657a 347f  .\./.].w..b.ez4.</code></pre>
+<p>However, <code>fastboot oem unlock</code> still is not working:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">fastboot</span> stage token.bin
+<span class="ex">Sending</span> <span class="st">'token.bin'</span> (0 KB)                         <span class="ex">OKAY</span> [  0.005s]
+<span class="ex">Finished.</span> Total time: 0.005s
+
+$ <span class="ex">fastboot</span> oem unlock
+<span class="ex">FAILED</span> (remote: <span class="st">'Unlock failed - Err:0xffffffff'</span>)
+<span class="ex">fastboot</span>: error: Command failed</code></pre></div>
+<p>The phone still manages to reboot though. I noticed that this is <code>512</code> bytes, same as <a href="https://github.com/bkerler/mtkclient/issues/110#issuecomment-975433985">bkerler/mtkclient#110 (comment)</a>. Tried overwriting the <code>devinfo</code> partition guessing from the comments, for what it is worth:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk w devinfo token.bin</code></pre></div>
+<p>Not much luck with this either.</p>
+<h2 id="restore">Restore</h2>
+<p>To restore functionality, it suffices to just flash the previously saved <code>boot.img</code> in the boot partition. I had also overwritten the previous <code>system.img</code> with Postmarket’s built image - so I had to revert that change as well.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">python</span> mtk w boot export/boot.img
+$ <span class="ex">python</span> mtk w system export/system.img</code></pre></div>
+<p>Hashes for verification match, no android corrupted messages this time on boot. The device lives another day. Further attempts could hard-brick the device, I’ll do it when I’m more informed.</p>
+<h2 id="next-steps">Next steps</h2>
+<p>What is undertaken here are very early steps. I feel overall better equipped than an enthusiast user who just followed XDA instructions 10 years ago and getting excited about the customizations.</p>
+<p>I have collected a few more links for further reading:</p>
+<ul>
+<li><a href="https://tinyhack.com/2021/01/31/dissecting-a-mediatek-bootrom-exploit/">Dissecting a MediaTek BootROM exploit</a></li>
+<li>Jonathan Levin: <a href="https://newandroidbook.com/Articles/aboot.html">Reverse Engineering Android’s Aboot</a></li>
+<li>XDA: <a href="https://forum.xda-developers.com/t/info-boot-process-android-vs-linux.3785254/">BOOT PROCESS: ANDROID vs. LINUX</a></li>
+<li>Android Image Kitchen: <a href="https://github.com/draekko/AIK-Linux">draekko/AIK-Linux</a></li>
+<li><a href="https://android.googlesource.com/platform/external/avb/+/master/README.md">Android Verified Boot 2.0</a></li>
+<li><a href="https://www.xda-developers.com/disable-system-app-bloatware-android/">How to disable any pre-installed system app bloatware on Android without root</a></li>
+</ul>
+<p>With regard to the Tecno Pova 3, I’ve found the following close relatives:</p>
+<ul>
+<li><a href="https://wiki.postmarketos.org/wiki/Volla_Phone_22_(volla-mimameid)">Volla Phone 22</a>, <a href="https://wiki.postmarketos.org/wiki/Volla_Phone_22_(volla-mimameid)/Hacking">Hacking</a></li>
+<li><a href="https://github.com/mt6768-dev/android_kernel_xiaomi_mt6768">mt6768-dev/android_kernel_xiaomi_mt6768</a>
+<ul>
+<li><a href="https://github.com/Redmi-MT6768/android_kernel_xiaomi_mt6768">Redmi-MT6768/android_kernel_xiaomi_mt6768</a></li>
+</ul></li>
+</ul>
+<p>The PostmarketOS and LineageOS efforts along smartphone hacking is also intended as a vessel to keep operating systems, kernel-engineering and surrounding skills sharp. Some exploitations to compromise devices and such would also be good learning and tools to add to my current arsenal. Expect to see more posts in this space!</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
