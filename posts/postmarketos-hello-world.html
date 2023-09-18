@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="PostmarketOS: Hello world!" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/postmarketos-hello-world.html" />
+        <title>PostmarketOS: Hello world!</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link rel="stylesheet" href="../static/css/hack.css" />
+        <link rel="stylesheet" href="../static/css/open-sans.css">
+        <link rel="stylesheet" href="../static/css/font-awesome.min.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>PostmarketOS: Hello world!</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Sep 19, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/linux.html">linux</a>, <a href="../tags/posts/os.html">os</a>, <a href="../tags/posts/postmarketos.html">postmarketos</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#bootloader-unlock">Bootloader unlock</a></li>
+<li><a href="#postmarketos">PostmarketOS</a><ul>
+<li><a href="#booting">Booting</a></li>
+<li><a href="#usb-ethernet-troubles">USB Ethernet troubles</a></li>
+<li><a href="#console">Console</a></li>
+<li><a href="#display">Display</a></li>
+<li><a href="#reverse-tethering">Reverse Tethering</a></li>
+</ul></li>
+<li><a href="#desktop-environment">Desktop Environment</a></li>
+<li><a href="#thoughts-and-next-steps">Thoughts and next steps</a></li>
+<li><a href="#acknowledgements">Acknowledgements</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>A week ago, from what was originally started as some minor smartphone hacking, I started going down the rabbit-hole of PostmarketOS porting.</p>
+<h2 id="bootloader-unlock">Bootloader unlock</h2>
+<p>If you take a pass at the <a href="../posts/smartphone-hacking.html">previous post</a>, you’ll notice that I tried all sorts of things to unlock a bootloader, despair that followed and almost giving up. The following methods all failed on me:</p>
+<ol style="list-style-type: decimal">
+<li>Windows: <a href="https://github.com/bkerler/mtkclient">Official MiUnlock</a></li>
+<li>Linux:
+<ol style="list-style-type: lower-alpha">
+<li><a href="https://github.com/Canny1913/miunlock">Canny1913/miunlock</a></li>
+<li><a href="https://github.com/RohitVerma882/termux-miunlock">RohitVerma882/termux-miunlock</a></li>
+<li><a href="https://www.xiaomitool.com/V2/">XiaomiToolV2</a></li>
+<li><a href="https://github.com/bkerler/mtkclient">bkerler/mtkclient</a></li>
+</ol></li>
+</ol>
+<p>I think my issues were from a broken fastboot. I was almost about to give-up and try something else, until ultimately through <a href="https://github.com/RohitVerma882/termux-miunlock">RohitVerma882/termux-unlock</a> I managed to get a 512 byte token. I tried writing this directly onto <code>devinfo</code> partition which failed, but taking a closer look at the issue comments <a href="https://github.com/bkerler/mtkclient/issues/110#issuecomment-975299392">#1</a> and <a href="https://github.com/bkerler/mtkclient/issues/110#issuecomment-975433985">#2</a>, I realized that I was writing to the beginning instead of the end.</p>
+<p>So, I quickly <a href="https://github.com/jerinphilip/pm-tooling/blob/main/src/write_token.c">scripted a program in C</a>, and wrote a binary to be copied as-is to the <code>devinfo</code> partition, flashed it using <code>mtkclient</code> and, to my surprise… <em>it unlocked!</em></p>
+<p>Never did I think a day will come when I start writing one-off tools in C, of all languages.</p>
+<h2 id="postmarketos">PostmarketOS</h2>
+<p>The previous post touched parts of building the operating-system using the OEM kernel adapted to PostmarketOS (which runs AlpineLinux) and Alpine’s packages. This build-install-image process does not require the original device to be a host, it could have been done on my laptop, or even GitHub CI (<code>x86_64</code>) cross-compiling into the target architecture (<code>armv7</code>). A successful build via <code>pmbootstrap</code> lead ends at the following instructions:</p>
+<p><strong>Flashing Information</strong></p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">pmbootstrap</span> flasher flash_rootfs
+<span class="co">#  Flashes the generated rootfs image to your device:</span>
+<span class="co">#</span>
+<span class="co">#  ws/chroot_native/home/pmos/rootfs/xiaomi-cereus.img</span>
+<span class="co">#  (</span><span class="al">NOTE</span><span class="co">: This file has a partition table, which contains /boot and /</span>
+<span class="co">#  subpartitions. That way we don't need to change the partition layout on your</span>
+<span class="co">#  device.)</span>
+<span class="co">#</span>
+$ <span class="ex">pmbootstrap</span> flasher flash_kernel
+<span class="co">#  Flashes the kernel + initramfs to your device:</span>
+<span class="co">#</span>
+<span class="co">#  /ws/chroot_rootfs_xiaomi-cereus/boot</span></code></pre></div>
+<p>Since my <code>fastboot</code> was broken and I did not trust it enough, I chose to continue the flashing process with <code>mtkclient</code>.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">pmbootstrap</span> flasher flash_rootfs 
+<span class="co"># [22:15:03] (native) flash rootfs image</span>
+<span class="co"># [22:15:05] (native) install mtkclient android-tools</span>
+<span class="co"># MTK Flash/Exploit Client V1.6.3 (c) B.Kerler 2018-2023</span>
+<span class="co"># ...</span>
+<span class="co"># Progress: |██████████████████████████████████████████████████| 100.0% Write (Sector 0x240000 of 0x240000, ) 8.75 MB/s.50 MB/sB/s</span>
+<span class="co"># Wrote /home/pmos/rootfs/xiaomi-cereus.img to sector 9797632 with sector count 112224223.</span>
+<span class="co"># [22:17:08] </span><span class="al">NOTE</span><span class="co">: chroot is still active (use 'pmbootstrap shutdown' as necessary)</span>
+<span class="co"># [22:17:08] DONE!</span>
+
+$ <span class="ex">pmbootstrap</span> flasher flash_kernel
+<span class="co"># [22:17:12] (rootfs_xiaomi-cereus) install device-xiaomi-cereus</span>
+<span class="co"># [22:17:20] (rootfs_xiaomi-cereus) install postmarketos-mkinitfs</span>
+<span class="co"># [22:17:23] (rootfs_xiaomi-cereus) mkinitfs xiaomi-cereus</span>
+<span class="co"># [22:17:26] </span><span class="al">WARNING</span><span class="co">: config-xiaomi-cereus.armv7 isn't configured properly (postmarketOS), run 'pmbootstrap kconfig check' for details!</span>
+<span class="co"># [22:17:26] (native) flash kernel xiaomi-cereus</span>
+<span class="co"># [22:17:27] (native) install mtkclient android-tools</span>
+<span class="co"># MTK Flash/Exploit Client V1.6.3 (c) B.Kerler 2018-2023</span>
+<span class="co"># ....</span>
+<span class="co"># Progress: |██████████████████████████████████████████████████| 100.0% Write (Sector 0x503C of 0x503C, ) 0.58 MB/s</span>
+<span class="co"># Wrote /mnt/rootfs_xiaomi-cereus/boot/boot.img to sector 1065984 with sector count 131072.</span>
+<span class="co"># [22:17:29] You will get an IP automatically assigned to your USB interface shortly.</span>
+<span class="co"># [22:17:29] Then you can connect to your device using ssh after pmOS has booted:</span>
+<span class="co"># [22:17:29] ssh jerin@172.16.42.1</span>
+<span class="co"># [22:17:29] </span><span class="al">NOTE</span><span class="co">: If you enabled full disk encryption, you should make sure that osk-sdl has been properly configured for your device</span>
+<span class="co"># [22:17:29] </span><span class="al">NOTE</span><span class="co">: chroot is still active (use 'pmbootstrap shutdown' as necessary)</span>
+<span class="co"># [22:17:29] DONE!</span></code></pre></div>
+<h3 id="booting">Booting</h3>
+<p>The expectation is that an SSH-daemon would be available to connect via a network enabled through the USB-cable. Instructions for this were also given.</p>
+<p><strong>SSH daemon information</strong></p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># SSH daemon is enabled (disable with --no-sshd).</span>
+<span class="co"># Login as 'jerin' with the password given during installation.</span></code></pre></div>
+<p>After flashing the built PostmarketOS image this time, and the phone started booting with the PostmarketOS bootsplash.</p>
+<div class="row">
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/hung-splash.jpg" alt="Loading… bootsplash. (hung)" />
+<p class="caption">Loading… bootsplash. (hung)</p>
+</div>
+</div>
+</div>
+<p>Eventually I figured I only had the bootsplash logo, with no Desktop Environment (DE). The frozen screen points to something is wrong underneath. The standard check is to go look at <code>lsusb</code> and <code>dmesg</code>.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">lsusb</span>
+<span class="co"># Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub</span>
+<span class="co"># Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub</span>
+<span class="co"># Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub</span>
+<span class="co"># Bus 001 Device 003: ID 06cb:00bd Synaptics, Inc. Prometheus MIS Touch Fingerprint Reader</span>
+<span class="co"># Bus 001 Device 002: ID 13d3:56bb IMC Networks Integrated Camera</span>
+<span class="co"># Bus 001 Device 074: ID 18d1:d001 Google Inc. Nexus 4 (fastboot)</span>
+<span class="co"># Bus 001 Device 004: ID 8087:0aaa Intel Corp. Bluetooth 9460/9560 Jefferson Peak (JfP)</span>
+<span class="co"># Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">dmesg</span> 
+<span class="co"># [26685.693978] usb 1-3: new high-speed USB device number 74 using xhci_hcd</span>
+<span class="co"># [26685.836233] usb 1-3: New USB device found, idVendor=18d1, idProduct=d001, bcdDevice= 4.09</span>
+<span class="co"># [26685.836249] usb 1-3: New USB device strings: Mfr=1, Product=2, SerialNumber=3</span>
+<span class="co"># [26685.836254] usb 1-3: Product: Xiaomi Redmi 6</span>
+<span class="co"># [26685.836258] usb 1-3: Manufacturer: Xiaomi</span>
+<span class="co"># [26685.836261] usb 1-3: SerialNumber: postmarketOS</span></code></pre></div>
+<p>Since <code>SerialNumber: postmarketOS</code> appeared, this meant the device had booted. However, my laptops kernel was failing to detect it as a USB tethering device.</p>
+<h3 id="usb-ethernet-troubles">USB Ethernet troubles</h3>
+<p>For some reason, my laptop was not recognizing it as an RNDIS host. RNDIS host is a term associated with when a phone is connected to the computer and internet and the computer uses internet via phone - a more popular term is <em>USB Tethering</em>. Except in our case, there was no internet, this was just a local network from the phone so that we could drop into an SSH shell within the phone.</p>
+<p>Initially I thought this issue was due to me manipulating <a href="https://github.com/bkerler/mtkclient/tree/c6389116d84a36ad33c95a3284d9311ec8fc5dfa/Setup/Linux">udev rules</a> for <a href="https://github.com/bkerler/mtkclient">mtkclient</a>. However, I noticed RNDIS recognition was working on my Desktop (<code>linux-6.4.x</code>) but not on my Laptop (<code>linux-6.1.x-lts</code>). The ArchLinux channel suggested upgrading kernel, which I did - and things were working from my laptop.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">dmesg</span> (truncated)
+<span class="co"># [26685.693978] usb 1-3: new high-speed USB device number 74 using xhci_hcd</span>
+<span class="co"># [26685.836233] usb 1-3: New USB device found, idVendor=18d1, idProduct=d001, bcdDevice= 4.09</span>
+<span class="co"># [26685.836249] usb 1-3: New USB device strings: Mfr=1, Product=2, SerialNumber=3</span>
+<span class="co"># [26685.836254] usb 1-3: Product: Xiaomi Redmi 6</span>
+<span class="co"># [26685.836258] usb 1-3: Manufacturer: Xiaomi</span>
+<span class="co"># [26685.836261] usb 1-3: SerialNumber: postmarketOS</span>
+<span class="co"># [26685.840481] rndis_host 1-3:1.0 usb0: register 'rndis_host' at usb-0000:00:14.0-3, RNDIS device, c6:1a:27:dd:a2:dc</span>
+<span class="co"># [26686.514605] rndis_host 1-3:1.0 enp0s20f0u3: renamed from usb0</span></code></pre></div>
+<p>While the issue and fix appears trivial, it took me a while to figure out the simple fix - some time went down the drain. Initially I was suspecting postmarketOS machinery failure as well.</p>
+<h3 id="console">Console</h3>
+<p>With USB network connectivity between the devices, I could now SSH into the phone.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">ssh</span> jerin@172.16.42.1
+<span class="co"># Welcome to postmarketOS! o/</span>
+<span class="co"># </span>
+<span class="co"># This distribution is based on Alpine Linux.</span>
+<span class="co"># First time using postmarketOS? Make sure to read the cheatsheet in the wiki:</span>
+<span class="co"># </span>
+<span class="co"># -&gt; https://postmarketos.org/cheatsheet</span>
+<span class="co"># </span>
+<span class="co"># You may change this message by editing /etc/motd.</span>
+<span class="co"># xiaomi-cereus:~$ </span></code></pre></div>
+<p>I could pretty much use the compute on the device from here. A lot of hardware (telephony, WiFi, display) all were not working. This is only console UI, so I can try on thing or the other.</p>
+<h3 id="display">Display</h3>
+<p>Now that I had a shell that I could issue commands using the laptop, I went looking for logs that could provide a clue as to what is happening. To be honest, I wasn’t entirely sure if the boot process was working because the screen still appeared to be bootlooping. Toward this I managed to wander around using different test-probles like <code>maximum-attention</code> and <code>debug-shell</code>.</p>
+<p>I tried some variations in DEs in the created images and flashing, out of which <a href="https://sxmo.org/deviceprofile">sxmo</a> gave me a first draw before crashing and rebooting, consistently over and over again. Other DEs were just hung on a blank screen.</p>
+<div class="row">
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/sxmo.jpg" alt="SXMO (Frozen display)" />
+<p class="caption">SXMO (Frozen display)</p>
+</div>
+</div>
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/xfce.jpg" alt="XFCE (Frozen display)" />
+<p class="caption">XFCE (Frozen display)</p>
+</div>
+</div>
+</div>
+<p>Eventually after doing things with OpenRC to enable and disable stuff, I ended up with first-draws for XFCE, and even some touch-interaction responses before hang. Since this was a first-draw problem searching would lead me to:</p>
+<ul>
+<li><a href="https://wiki.postmarketos.org/wiki/Troubleshooting:display#Generic_troubleshooting_(any_manufacturer)">Troubleshooting:display#Generic_troubleshooting_(any_manufacturer)</a>.</li>
+</ul>
+<p>I was ignoring content despite the headline because <code>msm</code> (Qualcomm?), but this was actually generic. Applying the fix fixed my display problem.</p>
+<h3 id="reverse-tethering">Reverse Tethering</h3>
+<p>I hoped WiFi would work so I won’t have to stay tethered to the Laptop, but the WiFi situation is pretty bad. <a href="https://wiki.postmarketos.org/wiki/USB_Internet">Reverse Tethering</a> - in my case, using laptop’s connection by the phone through the tether was turning out to be the easy option:</p>
+<p>On the phone (guest), the the instructions are to issue the following.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">route</span> add default gw 172.16.42.2
+
+<span class="co"># Make the above change permanent.</span>
+<span class="bu">echo</span> <span class="st">'route add default gw 172.16.42.2'</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/local.d/usb_internet.start
+<span class="fu">chmod</span> +x /etc/local.d/usb_internet.start
+
+<span class="co"># Manually add nameserver</span>
+<span class="bu">echo</span> nameserver 1.1.1.1 <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/resolv.conf</code></pre></div>
+<p>The wiki suggests it’s possible to redirect output, but I had to issue <code>sudo tee</code> as user.</p>
+<p>For my archlinux on laptop (host), I had to issue the following:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">iptables</span> -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+<span class="ex">iptables</span> -A FORWARD -s 172.16.42.0/24 -j ACCEPT
+<span class="ex">iptables</span> -A POSTROUTING -t nat -j MASQUERADE -s 172.16.42.0/24
+<span class="ex">iptables-save</span> </code></pre></div>
+<h2 id="desktop-environment">Desktop Environment</h2>
+<p>With this, I had internet, and could try and swap out Desktop Environments without having to flash over and over again. One could use <a href="https://wiki.postmarketos.org/wiki/Category:Interface">Category:Interfaces</a> as a start-point. Quick status updates on these are:</p>
+<ul>
+<li>GNOME Mobile: fail</li>
+<li>KDE Plasma Mobile: fail</li>
+<li>sxmo: Works, unusable.</li>
+<li>XFCE4: Works, usable.</li>
+</ul>
+<p>I haven’t tried much further, just trying out applications and other things on top with XFCE4 for now. I saw a few videos of patched GNOME Mobile shells, which appear nice, and also <a href="https://puri.sm/posts/phosh-overview/">Phosh</a>. There is an on-screen keyboard (bit ugly). Applications are running.</p>
+<div class="row">
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/xfce-sc-clean.png" alt="XFCE Screenshot (clean)" />
+<p class="caption">XFCE Screenshot (clean)</p>
+</div>
+</div>
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/xfce-sc-apps.png" alt="XFCE Screenshot (apps)" />
+<p class="caption">XFCE Screenshot (apps)</p>
+</div>
+</div>
+</div>
+<h2 id="thoughts-and-next-steps">Thoughts and next steps</h2>
+<p>While android is still running Linux under the hood, pure Linux on the phone still has a long way to go. It’s really hard to support the fragmented space of devices, if I were to guess why. Most drivers for specialized hardware is in android userland and proprietary - to the point reverse engineering is the favourable option. It will be a while before Linux on the phone takes off. Even if it happens, it’s unlikely the ecosystem of apps that exists on Apple or Android or Windows can be matched.</p>
+<p>I’m not sure if there’s much to gain by mainlining kernels for old phones at this stage, but poking in this space, contributing one or the other small patches at the bare minimum scratches an itch to hack and tinker. I have initialized a wiki-page for my phone - <a href="https://wiki.postmarketos.org/wiki/Xiaomi_Redmi_6_(xiaomi-cereus)">Xiaomi_Redmi_6_(xiaomi-cereus)</a>. I have the pmports diff ready at <a href="https://github.com/jerinphilip/pmaports/pull/1">jerinphilip/pmaports#1</a>, and will slowly work towards getting the port into the main repository and in time hopefully further features working.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>Two PostmarketOS developers/enthusiasts - <a href="https://mstdn.social/@justsoup">@justsoup</a> and <a href="https://mastodon.social/@hexaheximal">@hexaheximal</a> helped a lot during the course of porting. It’s unlikely I would have made progress as fast as I could without these two. I plan to contribute to some efforts of mainlining MT6765 series of chips.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>

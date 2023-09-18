@@ -8,8 +8,293 @@
         <name>Jerin Philip</name>
         <email>jerinphilip@live.in</email>
     </author>
-    <updated>2023-09-13T00:00:00Z</updated>
+    <updated>2023-09-19T00:00:00Z</updated>
     <entry>
+    <title>PostmarketOS: Hello world!</title>
+    <link href="http://jerinphilip.github.io/posts/postmarketos-hello-world.html" />
+    <id>http://jerinphilip.github.io/posts/postmarketos-hello-world.html</id>
+    <published>2023-09-19T00:00:00Z</published>
+    <updated>2023-09-19T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="PostmarketOS: Hello world!" />
+        <meta property="og:url" content="http://jerinphilip.github.io/posts/postmarketos-hello-world.html" />
+        <title>PostmarketOS: Hello world!</title>
+        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
+        <link rel="stylesheet" href="../static/css/hack.css" />
+        <link rel="stylesheet" href="../static/css/open-sans.css">
+        <link rel="stylesheet" href="../static/css/font-awesome.min.css">
+        <link rel="stylesheet" href="../static/css/tether.min.css" />
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="../static/css/custom.css" />
+        <link rel="stylesheet" href="../static/css/kate.css" />
+        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
+        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+        <script type="text/javascript" src="../static/js/tether.min.js"></script>
+        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
+        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
+        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
+    </head>
+    <body>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <header>
+    <span><a href="../">/home/jerin</a> </span>
+    <!--
+    <span><a href="/archive.html">posts</a></span>,
+    <span><a href="/contact.html">contact</a></span>
+    -->
+</header>
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h1>PostmarketOS: Hello world!</h1>
+                        <div class="row mb-4">
+    <div class="post-info col">
+        <div>Sep 19, 2023</div>
+
+         
+
+         
+            <div><a href="../tags/posts/linux.html">linux</a>, <a href="../tags/posts/os.html">os</a>, <a href="../tags/posts/postmarketos.html">postmarketos</a></div>
+         
+    </div>
+</div>
+
+<div class="row">
+    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
+<li><a href="#bootloader-unlock">Bootloader unlock</a></li>
+<li><a href="#postmarketos">PostmarketOS</a><ul>
+<li><a href="#booting">Booting</a></li>
+<li><a href="#usb-ethernet-troubles">USB Ethernet troubles</a></li>
+<li><a href="#console">Console</a></li>
+<li><a href="#display">Display</a></li>
+<li><a href="#reverse-tethering">Reverse Tethering</a></li>
+</ul></li>
+<li><a href="#desktop-environment">Desktop Environment</a></li>
+<li><a href="#thoughts-and-next-steps">Thoughts and next steps</a></li>
+<li><a href="#acknowledgements">Acknowledgements</a></li>
+</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>A week ago, from what was originally started as some minor smartphone hacking, I started going down the rabbit-hole of PostmarketOS porting.</p>
+<h2 id="bootloader-unlock">Bootloader unlock</h2>
+<p>If you take a pass at the <a href="../posts/smartphone-hacking.html">previous post</a>, you’ll notice that I tried all sorts of things to unlock a bootloader, despair that followed and almost giving up. The following methods all failed on me:</p>
+<ol style="list-style-type: decimal">
+<li>Windows: <a href="https://github.com/bkerler/mtkclient">Official MiUnlock</a></li>
+<li>Linux:
+<ol style="list-style-type: lower-alpha">
+<li><a href="https://github.com/Canny1913/miunlock">Canny1913/miunlock</a></li>
+<li><a href="https://github.com/RohitVerma882/termux-miunlock">RohitVerma882/termux-miunlock</a></li>
+<li><a href="https://www.xiaomitool.com/V2/">XiaomiToolV2</a></li>
+<li><a href="https://github.com/bkerler/mtkclient">bkerler/mtkclient</a></li>
+</ol></li>
+</ol>
+<p>I think my issues were from a broken fastboot. I was almost about to give-up and try something else, until ultimately through <a href="https://github.com/RohitVerma882/termux-miunlock">RohitVerma882/termux-unlock</a> I managed to get a 512 byte token. I tried writing this directly onto <code>devinfo</code> partition which failed, but taking a closer look at the issue comments <a href="https://github.com/bkerler/mtkclient/issues/110#issuecomment-975299392">#1</a> and <a href="https://github.com/bkerler/mtkclient/issues/110#issuecomment-975433985">#2</a>, I realized that I was writing to the beginning instead of the end.</p>
+<p>So, I quickly <a href="https://github.com/jerinphilip/pm-tooling/blob/main/src/write_token.c">scripted a program in C</a>, and wrote a binary to be copied as-is to the <code>devinfo</code> partition, flashed it using <code>mtkclient</code> and, to my surprise… <em>it unlocked!</em></p>
+<p>Never did I think a day will come when I start writing one-off tools in C, of all languages.</p>
+<h2 id="postmarketos">PostmarketOS</h2>
+<p>The previous post touched parts of building the operating-system using the OEM kernel adapted to PostmarketOS (which runs AlpineLinux) and Alpine’s packages. This build-install-image process does not require the original device to be a host, it could have been done on my laptop, or even GitHub CI (<code>x86_64</code>) cross-compiling into the target architecture (<code>armv7</code>). A successful build via <code>pmbootstrap</code> lead ends at the following instructions:</p>
+<p><strong>Flashing Information</strong></p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">pmbootstrap</span> flasher flash_rootfs
+<span class="co">#  Flashes the generated rootfs image to your device:</span>
+<span class="co">#</span>
+<span class="co">#  ws/chroot_native/home/pmos/rootfs/xiaomi-cereus.img</span>
+<span class="co">#  (</span><span class="al">NOTE</span><span class="co">: This file has a partition table, which contains /boot and /</span>
+<span class="co">#  subpartitions. That way we don't need to change the partition layout on your</span>
+<span class="co">#  device.)</span>
+<span class="co">#</span>
+$ <span class="ex">pmbootstrap</span> flasher flash_kernel
+<span class="co">#  Flashes the kernel + initramfs to your device:</span>
+<span class="co">#</span>
+<span class="co">#  /ws/chroot_rootfs_xiaomi-cereus/boot</span></code></pre></div>
+<p>Since my <code>fastboot</code> was broken and I did not trust it enough, I chose to continue the flashing process with <code>mtkclient</code>.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">pmbootstrap</span> flasher flash_rootfs 
+<span class="co"># [22:15:03] (native) flash rootfs image</span>
+<span class="co"># [22:15:05] (native) install mtkclient android-tools</span>
+<span class="co"># MTK Flash/Exploit Client V1.6.3 (c) B.Kerler 2018-2023</span>
+<span class="co"># ...</span>
+<span class="co"># Progress: |██████████████████████████████████████████████████| 100.0% Write (Sector 0x240000 of 0x240000, ) 8.75 MB/s.50 MB/sB/s</span>
+<span class="co"># Wrote /home/pmos/rootfs/xiaomi-cereus.img to sector 9797632 with sector count 112224223.</span>
+<span class="co"># [22:17:08] </span><span class="al">NOTE</span><span class="co">: chroot is still active (use 'pmbootstrap shutdown' as necessary)</span>
+<span class="co"># [22:17:08] DONE!</span>
+
+$ <span class="ex">pmbootstrap</span> flasher flash_kernel
+<span class="co"># [22:17:12] (rootfs_xiaomi-cereus) install device-xiaomi-cereus</span>
+<span class="co"># [22:17:20] (rootfs_xiaomi-cereus) install postmarketos-mkinitfs</span>
+<span class="co"># [22:17:23] (rootfs_xiaomi-cereus) mkinitfs xiaomi-cereus</span>
+<span class="co"># [22:17:26] </span><span class="al">WARNING</span><span class="co">: config-xiaomi-cereus.armv7 isn't configured properly (postmarketOS), run 'pmbootstrap kconfig check' for details!</span>
+<span class="co"># [22:17:26] (native) flash kernel xiaomi-cereus</span>
+<span class="co"># [22:17:27] (native) install mtkclient android-tools</span>
+<span class="co"># MTK Flash/Exploit Client V1.6.3 (c) B.Kerler 2018-2023</span>
+<span class="co"># ....</span>
+<span class="co"># Progress: |██████████████████████████████████████████████████| 100.0% Write (Sector 0x503C of 0x503C, ) 0.58 MB/s</span>
+<span class="co"># Wrote /mnt/rootfs_xiaomi-cereus/boot/boot.img to sector 1065984 with sector count 131072.</span>
+<span class="co"># [22:17:29] You will get an IP automatically assigned to your USB interface shortly.</span>
+<span class="co"># [22:17:29] Then you can connect to your device using ssh after pmOS has booted:</span>
+<span class="co"># [22:17:29] ssh jerin@172.16.42.1</span>
+<span class="co"># [22:17:29] </span><span class="al">NOTE</span><span class="co">: If you enabled full disk encryption, you should make sure that osk-sdl has been properly configured for your device</span>
+<span class="co"># [22:17:29] </span><span class="al">NOTE</span><span class="co">: chroot is still active (use 'pmbootstrap shutdown' as necessary)</span>
+<span class="co"># [22:17:29] DONE!</span></code></pre></div>
+<h3 id="booting">Booting</h3>
+<p>The expectation is that an SSH-daemon would be available to connect via a network enabled through the USB-cable. Instructions for this were also given.</p>
+<p><strong>SSH daemon information</strong></p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># SSH daemon is enabled (disable with --no-sshd).</span>
+<span class="co"># Login as 'jerin' with the password given during installation.</span></code></pre></div>
+<p>After flashing the built PostmarketOS image this time, and the phone started booting with the PostmarketOS bootsplash.</p>
+<div class="row">
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/hung-splash.jpg" alt="Loading… bootsplash. (hung)" />
+<p class="caption">Loading… bootsplash. (hung)</p>
+</div>
+</div>
+</div>
+<p>Eventually I figured I only had the bootsplash logo, with no Desktop Environment (DE). The frozen screen points to something is wrong underneath. The standard check is to go look at <code>lsusb</code> and <code>dmesg</code>.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ex">lsusb</span>
+<span class="co"># Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub</span>
+<span class="co"># Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub</span>
+<span class="co"># Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub</span>
+<span class="co"># Bus 001 Device 003: ID 06cb:00bd Synaptics, Inc. Prometheus MIS Touch Fingerprint Reader</span>
+<span class="co"># Bus 001 Device 002: ID 13d3:56bb IMC Networks Integrated Camera</span>
+<span class="co"># Bus 001 Device 074: ID 18d1:d001 Google Inc. Nexus 4 (fastboot)</span>
+<span class="co"># Bus 001 Device 004: ID 8087:0aaa Intel Corp. Bluetooth 9460/9560 Jefferson Peak (JfP)</span>
+<span class="co"># Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">dmesg</span> 
+<span class="co"># [26685.693978] usb 1-3: new high-speed USB device number 74 using xhci_hcd</span>
+<span class="co"># [26685.836233] usb 1-3: New USB device found, idVendor=18d1, idProduct=d001, bcdDevice= 4.09</span>
+<span class="co"># [26685.836249] usb 1-3: New USB device strings: Mfr=1, Product=2, SerialNumber=3</span>
+<span class="co"># [26685.836254] usb 1-3: Product: Xiaomi Redmi 6</span>
+<span class="co"># [26685.836258] usb 1-3: Manufacturer: Xiaomi</span>
+<span class="co"># [26685.836261] usb 1-3: SerialNumber: postmarketOS</span></code></pre></div>
+<p>Since <code>SerialNumber: postmarketOS</code> appeared, this meant the device had booted. However, my laptops kernel was failing to detect it as a USB tethering device.</p>
+<h3 id="usb-ethernet-troubles">USB Ethernet troubles</h3>
+<p>For some reason, my laptop was not recognizing it as an RNDIS host. RNDIS host is a term associated with when a phone is connected to the computer and internet and the computer uses internet via phone - a more popular term is <em>USB Tethering</em>. Except in our case, there was no internet, this was just a local network from the phone so that we could drop into an SSH shell within the phone.</p>
+<p>Initially I thought this issue was due to me manipulating <a href="https://github.com/bkerler/mtkclient/tree/c6389116d84a36ad33c95a3284d9311ec8fc5dfa/Setup/Linux">udev rules</a> for <a href="https://github.com/bkerler/mtkclient">mtkclient</a>. However, I noticed RNDIS recognition was working on my Desktop (<code>linux-6.4.x</code>) but not on my Laptop (<code>linux-6.1.x-lts</code>). The ArchLinux channel suggested upgrading kernel, which I did - and things were working from my laptop.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">dmesg</span> (truncated)
+<span class="co"># [26685.693978] usb 1-3: new high-speed USB device number 74 using xhci_hcd</span>
+<span class="co"># [26685.836233] usb 1-3: New USB device found, idVendor=18d1, idProduct=d001, bcdDevice= 4.09</span>
+<span class="co"># [26685.836249] usb 1-3: New USB device strings: Mfr=1, Product=2, SerialNumber=3</span>
+<span class="co"># [26685.836254] usb 1-3: Product: Xiaomi Redmi 6</span>
+<span class="co"># [26685.836258] usb 1-3: Manufacturer: Xiaomi</span>
+<span class="co"># [26685.836261] usb 1-3: SerialNumber: postmarketOS</span>
+<span class="co"># [26685.840481] rndis_host 1-3:1.0 usb0: register 'rndis_host' at usb-0000:00:14.0-3, RNDIS device, c6:1a:27:dd:a2:dc</span>
+<span class="co"># [26686.514605] rndis_host 1-3:1.0 enp0s20f0u3: renamed from usb0</span></code></pre></div>
+<p>While the issue and fix appears trivial, it took me a while to figure out the simple fix - some time went down the drain. Initially I was suspecting postmarketOS machinery failure as well.</p>
+<h3 id="console">Console</h3>
+<p>With USB network connectivity between the devices, I could now SSH into the phone.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="fu">ssh</span> jerin@172.16.42.1
+<span class="co"># Welcome to postmarketOS! o/</span>
+<span class="co"># </span>
+<span class="co"># This distribution is based on Alpine Linux.</span>
+<span class="co"># First time using postmarketOS? Make sure to read the cheatsheet in the wiki:</span>
+<span class="co"># </span>
+<span class="co"># -&gt; https://postmarketos.org/cheatsheet</span>
+<span class="co"># </span>
+<span class="co"># You may change this message by editing /etc/motd.</span>
+<span class="co"># xiaomi-cereus:~$ </span></code></pre></div>
+<p>I could pretty much use the compute on the device from here. A lot of hardware (telephony, WiFi, display) all were not working. This is only console UI, so I can try on thing or the other.</p>
+<h3 id="display">Display</h3>
+<p>Now that I had a shell that I could issue commands using the laptop, I went looking for logs that could provide a clue as to what is happening. To be honest, I wasn’t entirely sure if the boot process was working because the screen still appeared to be bootlooping. Toward this I managed to wander around using different test-probles like <code>maximum-attention</code> and <code>debug-shell</code>.</p>
+<p>I tried some variations in DEs in the created images and flashing, out of which <a href="https://sxmo.org/deviceprofile">sxmo</a> gave me a first draw before crashing and rebooting, consistently over and over again. Other DEs were just hung on a blank screen.</p>
+<div class="row">
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/sxmo.jpg" alt="SXMO (Frozen display)" />
+<p class="caption">SXMO (Frozen display)</p>
+</div>
+</div>
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/xfce.jpg" alt="XFCE (Frozen display)" />
+<p class="caption">XFCE (Frozen display)</p>
+</div>
+</div>
+</div>
+<p>Eventually after doing things with OpenRC to enable and disable stuff, I ended up with first-draws for XFCE, and even some touch-interaction responses before hang. Since this was a first-draw problem searching would lead me to:</p>
+<ul>
+<li><a href="https://wiki.postmarketos.org/wiki/Troubleshooting:display#Generic_troubleshooting_(any_manufacturer)">Troubleshooting:display#Generic_troubleshooting_(any_manufacturer)</a>.</li>
+</ul>
+<p>I was ignoring content despite the headline because <code>msm</code> (Qualcomm?), but this was actually generic. Applying the fix fixed my display problem.</p>
+<h3 id="reverse-tethering">Reverse Tethering</h3>
+<p>I hoped WiFi would work so I won’t have to stay tethered to the Laptop, but the WiFi situation is pretty bad. <a href="https://wiki.postmarketos.org/wiki/USB_Internet">Reverse Tethering</a> - in my case, using laptop’s connection by the phone through the tether was turning out to be the easy option:</p>
+<p>On the phone (guest), the the instructions are to issue the following.</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">route</span> add default gw 172.16.42.2
+
+<span class="co"># Make the above change permanent.</span>
+<span class="bu">echo</span> <span class="st">'route add default gw 172.16.42.2'</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/local.d/usb_internet.start
+<span class="fu">chmod</span> +x /etc/local.d/usb_internet.start
+
+<span class="co"># Manually add nameserver</span>
+<span class="bu">echo</span> nameserver 1.1.1.1 <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/resolv.conf</code></pre></div>
+<p>The wiki suggests it’s possible to redirect output, but I had to issue <code>sudo tee</code> as user.</p>
+<p>For my archlinux on laptop (host), I had to issue the following:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">iptables</span> -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+<span class="ex">iptables</span> -A FORWARD -s 172.16.42.0/24 -j ACCEPT
+<span class="ex">iptables</span> -A POSTROUTING -t nat -j MASQUERADE -s 172.16.42.0/24
+<span class="ex">iptables-save</span> </code></pre></div>
+<h2 id="desktop-environment">Desktop Environment</h2>
+<p>With this, I had internet, and could try and swap out Desktop Environments without having to flash over and over again. One could use <a href="https://wiki.postmarketos.org/wiki/Category:Interface">Category:Interfaces</a> as a start-point. Quick status updates on these are:</p>
+<ul>
+<li>GNOME Mobile: fail</li>
+<li>KDE Plasma Mobile: fail</li>
+<li>sxmo: Works, unusable.</li>
+<li>XFCE4: Works, usable.</li>
+</ul>
+<p>I haven’t tried much further, just trying out applications and other things on top with XFCE4 for now. I saw a few videos of patched GNOME Mobile shells, which appear nice, and also <a href="https://puri.sm/posts/phosh-overview/">Phosh</a>. There is an on-screen keyboard (bit ugly). Applications are running.</p>
+<div class="row">
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/xfce-sc-clean.png" alt="XFCE Screenshot (clean)" />
+<p class="caption">XFCE Screenshot (clean)</p>
+</div>
+</div>
+<div class="col-sm-12 col-md-6">
+<div class="figure">
+<img src="../static/images/pmos/xfce-sc-apps.png" alt="XFCE Screenshot (apps)" />
+<p class="caption">XFCE Screenshot (apps)</p>
+</div>
+</div>
+</div>
+<h2 id="thoughts-and-next-steps">Thoughts and next steps</h2>
+<p>While android is still running Linux under the hood, pure Linux on the phone still has a long way to go. It’s really hard to support the fragmented space of devices, if I were to guess why. Most drivers for specialized hardware is in android userland and proprietary - to the point reverse engineering is the favourable option. It will be a while before Linux on the phone takes off. Even if it happens, it’s unlikely the ecosystem of apps that exists on Apple or Android or Windows can be matched.</p>
+<p>I’m not sure if there’s much to gain by mainlining kernels for old phones at this stage, but poking in this space, contributing one or the other small patches at the bare minimum scratches an itch to hack and tinker. I have initialized a wiki-page for my phone - <a href="https://wiki.postmarketos.org/wiki/Xiaomi_Redmi_6_(xiaomi-cereus)">Xiaomi_Redmi_6_(xiaomi-cereus)</a>. I have the pmports diff ready at <a href="https://github.com/jerinphilip/pmaports/pull/1">jerinphilip/pmaports#1</a>, and will slowly work towards getting the port into the main repository and in time hopefully further features working.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>Two PostmarketOS developers/enthusiasts - <a href="https://mstdn.social/@justsoup">@justsoup</a> and <a href="https://mastodon.social/@hexaheximal">@hexaheximal</a> helped a lot during the course of porting. It’s unlikely I would have made progress as fast as I could without these two. I plan to contribute to some efforts of mainlining MT6765 series of chips.</p></div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        
+<footer>
+    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
+</footer>
+
+                    </div>
+                </div>
+            </div>
+        <script type="text/javascript" src="../static/js/init.js"></script>
+    </body>
+</html>
+]]></summary>
+</entry>
+<entry>
     <title>Smartphone hacking baby-steps</title>
     <link href="http://jerinphilip.github.io/posts/smartphone-hacking.html" />
     <id>http://jerinphilip.github.io/posts/smartphone-hacking.html</id>
@@ -2280,201 +2565,6 @@ encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
 <p>Vilém Zouhar, Michal Novák, Matúš Žilinec, Ondřej Bojar, Mateo Obregón, Robin L. Hill, Frédéric Blain, Marina Fomicheva, Lucia Specia, and Lisa Yankovskaya. 2021. Backtranslation feedback improves user confidence in MT, not quality. In <em>Proceedings of the 2021 conference of the north american chapter of the association for computational linguistics: Human language technologies</em>, pages 151–161, Online, June. Association for Computational Linguistics.</p>
 </div>
 </div></div>
-</div>
-
-
-<div class="row">
-    <div class="col">
-        <p class="text-muted font-italic"> (Comments disabled. Email me instead.) </p>
-    </div>
-</div>
-
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        
-<footer>
-    <small>Site generated using <a href="http://jaspervdj.be/hakyll">Hakyll</a></small>
-</footer>
-
-                    </div>
-                </div>
-            </div>
-        <script type="text/javascript" src="../static/js/init.js"></script>
-    </body>
-</html>
-]]></summary>
-</entry>
-<entry>
-    <title>Remote work: Handling connection drops and disruptions</title>
-    <link href="http://jerinphilip.github.io/posts/remote-work-handling-disruptions.html" />
-    <id>http://jerinphilip.github.io/posts/remote-work-handling-disruptions.html</id>
-    <published>2020-08-28T00:00:00Z</published>
-    <updated>2020-08-28T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta property="og:title" content="Remote work: Handling connection drops and disruptions" />
-        <meta property="og:url" content="http://jerinphilip.github.io/posts/remote-work-handling-disruptions.html" />
-        <title>Remote work: Handling connection drops and disruptions</title>
-        <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon">
-        <link rel="stylesheet" href="../static/css/hack.css" />
-        <link rel="stylesheet" href="../static/css/open-sans.css">
-        <link rel="stylesheet" href="../static/css/font-awesome.min.css">
-        <link rel="stylesheet" href="../static/css/tether.min.css" />
-        <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="../static/css/custom.css" />
-        <link rel="stylesheet" href="../static/css/kate.css" />
-        <link rel="stylesheet" href="../static/css/ekko-lightbox.css" />
-        <script type="text/javascript" src="../static/js/jquery.min.js"></script>
-        <script type="text/javascript" src="../static/js/tether.min.js"></script>
-        <script type="text/javascript" src="../static/js/anchor.min.js"></script>
-        <script type="text/javascript" src="../static/js/ekko-lightbox.min.js"></script>
-        <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
-        <script type="text/x-mathjax-config" src="../static/js/mathjax-config.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML"></script>
-    </head>
-    <body>
-            <div class="container">
-                <div class="row">
-                    <div class="col">
-                        <header>
-    <span><a href="../">/home/jerin</a> </span>
-    <!--
-    <span><a href="/archive.html">posts</a></span>,
-    <span><a href="/contact.html">contact</a></span>
-    -->
-</header>
-
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <h1>Remote work: Handling connection drops and disruptions</h1>
-                        <div class="row mb-4">
-    <div class="post-info col">
-        <div>Aug 28, 2020</div>
-
-         
-
-         
-            <div><a href="../tags/posts/workflow.html">workflow</a>, <a href="../tags/posts/hpc.html">hpc</a>, <a href="../tags/posts/remote-work.html">remote-work</a></div>
-         
-    </div>
-</div>
-
-<div class="row">
-    <div class="toc col-md-4 col-sm-12 order-md-second"><h6>Outline</h6><ul>
-<li><a href="#try-to-find-a-decent-nix-shell.">Try to find a decent *nix shell.</a></li>
-<li><a href="#always-leave-a-session-on-the-server-tmux.">Always leave a session on the server: tmux.</a><ul>
-<li><a href="#installing-tmux-locally.">Installing tmux locally.</a></li>
-<li><a href="#configuring-tmux.">Configuring tmux.</a></li>
-<li><a href="#auto-attach-sessions">auto-attach sessions!</a></li>
-</ul></li>
-<li><a href="#the-mobile-shell">The mobile shell</a><ul>
-<li><a href="#configuring-own-install.">Configuring own install.</a></li>
-</ul></li>
-<li><a href="#local-edits-are-always-more-convenient.">Local edits are always more convenient.</a><ul>
-<li><a href="#bringing-git-into-the-workflow">Bringing git into the workflow…</a></li>
-</ul></li>
-<li><a href="#on-phone-juicessh">On Phone: JuiceSSH</a></li>
-<li><a href="#sharing-text">Sharing Text</a><ul>
-<li><a href="#pastebin-services">Pastebin services</a></li>
-</ul></li>
-<li><a href="#epilogue">Epilogue</a></li>
-</ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>My home is perhaps not located in the most urbanized of places. We had broadband a while back but very limited offerings. The only provider that existed - BSNL provided were absurdly slow and not value for money. At the time Jio came up as an alternative, I had asked BSNL office if they’d ever have any better offerings. They responded negative for the near future. The broadband-connection had been scrapped since then, and I had switched the home connection completely to 4G after some speedtest benchmarks. Something I have to look forward to is Fiber to the Home (FTTH) technology has presently made ways to where my home is and I might just get a good enough connection soon. I might have to bear with a little delay though. Thus fast forward a year or two from my earlier change of internet back home - I am back in a situation where I need a stronger connection, or manage with Jio amidst connection fluctuations etc etc.</p>
-<p>On a recent conversation with a colleague at IIIT Hyderabad who started with MobaXterm on Windows with vanilla SSH, I realized many people don’t know these methods. This would be the umpteenth time someone has brought these troubles in front of me, and I’d rather have a document which I can point to going ahead than having to describe each time. On another thread, I have realized Sukanta Sen, soon to be work-colleague and Prof. Kenneth Heafield, my new boss have also shared some troubles with working remotely connecting to servers. They have suggested mosh, which I have already been using for about 2-3 years now and will happily start using in the new environment soon.</p>
-<p>With COVID-19 lockdown situation and being stuck to working from home often experiencing interruptions with the usual providers, this is perhaps a good time time to write-up what I have been doing for a while. There are several tools which I used in the past to work around a horrible network connection. This post is specific to to maintain SSH-like sessions resilient to network drops and to avoid disruptions to the an overall programming workflow.</p>
-<h1 id="try-to-find-a-decent-nix-shell.">Try to find a decent *nix shell.</h1>
-<p>I haven’t historically liked the alternative offerings of PuTTY, MobaXterm, Cygwin etc. I would not thus recommend these, but I guess in the end it’s a matter of taste. Normally, working with servers have been easier for me in Linux. Since I got my new laptop and saw Windows Subsystem for Linux as a decent alternative, I have since shifted. I have an Ubuntu 18.04 currently running within my Windows OS. The following should be decent starting points to replicate my recommendation of an environment with a Windows machine.</p>
-<ul>
-<li><a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">Install WSL 2.0</a></li>
-<li>Here’s <a href="https://www.microsoft.com/en-us/p/ubuntu-1804-lts/9n9tngvndl3q">Ubuntu 18.04 LTS</a>. Another variant if you need can be installed from even the Windows Store.</li>
-</ul>
-<p>On this *nix setup and one such on the remote, the content ahead describes how to get the following tooling working:</p>
-<ul>
-<li>tmux: installing, auto-attaching/save-resume sessions</li>
-<li>mosh: building connection drop resilience and better response in UX.</li>
-<li>JuiceSSH: take occassional checks when you are travelling.</li>
-</ul>
-<h1 id="always-leave-a-session-on-the-server-tmux.">Always leave a session on the server: tmux.</h1>
-<p>I always prefer to leave tmux sessions running on a server that is guaranteed to have network connectivity. At IIIT-Hyderabad, my former university and NAVER LABS Europe where I recently finished my internship, this had been the gateway nodes which allow for such operation. In IIIT - this was atom or ada, the headnodes to the HPC clusters I worked with.</p>
-<p>If you have tmux (one of the recent versions) installed already on this server, life-becomes really easy. Often server-admins prefer ancient CentOS and tmux versions, which I do not find to my taste. For the uninitiated, it’s actually really easy to install a more recent version of tmux by yourself without root-permissions. The only dependency tmux has is perhaps libevent.</p>
-<h2 id="installing-tmux-locally.">Installing tmux locally.</h2>
-<p>The following is subject to change, as the source of the following packages change. At the time this post is being written:</p>
-<p>You can find a recent version of tmux at:</p>
-<ul>
-<li><a href="https://github.com/tmux/tmux/releases" class="uri">https://github.com/tmux/tmux/releases</a></li>
-</ul>
-<p>How you install any package locally is usually very simple, once you know the linux install routine.</p>
-<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">./configure</span> --prefix=<span class="va">$HOME</span>/.local/
-<span class="fu">make</span> <span class="kw">&amp;&amp;</span> <span class="fu">make</span> install</code></pre></div>
-<p>I have not checked this, but usually, the routine throws up a complaint when you try to do the above alone about a libevent dependency. Normally this is taken care of a package manager, but if you’re not root you’d have some additional trouble. Thankfully, tmux has in the past installed for me with just one additional dependency - which is libevent. Releases can be found somewhere below.</p>
-<ul>
-<li><a href="https://github.com/libevent/libevent/releases" class="uri">https://github.com/libevent/libevent/releases</a></li>
-<li><a href="https://libevent.org/" class="uri">https://libevent.org/</a></li>
-</ul>
-<h2 id="configuring-tmux.">Configuring tmux.</h2>
-<p>There are a lot of ninja-techniques to configure as well. I often try to stick with the bare minimum and defaults (not changing modifiers etc), so I can get started on the next server with minimum configuration change requirements.</p>
-<p>You can find several good enough tutorials to configure tmux online.</p>
-<h2 id="auto-attach-sessions">auto-attach sessions!</h2>
-<p>I change machines between my laptop, desktop and phone while connecting to the servers described above. A desirable feature is consistency among all three, and saved sessions with auto-attach at the point of connection. I normally use only one tmux session and multiplex using panes or splits.</p>
-<p>I have the following script which auto-attaches a tmux if it is already running, otherwise creates one for me. Add the snippet in your <code>~/.bashrc</code> or <code>~/.bash_profile</code> on the server.</p>
-<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># HOSTNAME checks and launches tmux only on the ada head-node.</span>
-<span class="co"># Checks if already within a tmux as well.</span>
-<span class="kw">if</span><span class="bu"> [</span> <span class="va">$HOSTNAME</span> <span class="ot">=</span> <span class="st">&quot;ada.iiit.ac.in&quot;</span><span class="bu"> ]</span> <span class="kw">&amp;&amp;</span><span class="bu"> [</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$TMUX</span><span class="st">&quot;</span><span class="bu"> ]</span> ; <span class="kw">then</span>
-    <span class="co"># attach if running    || launch new</span>
-    <span class="ex">tmux</span> attach -dt <span class="st">&quot;main&quot;</span> <span class="kw">||</span> <span class="ex">tmux</span> new -s <span class="st">&quot;main&quot;</span>
-<span class="kw">fi</span></code></pre></div>
-<p>The above snippet is specific to <code>ada.iiit.ac.in</code>, but you can come up with something similar based on your setup.</p>
-<p>If you’re not using bash, which is default on most systems, you should be knowledgeble enough to find the runtime-configuration file where this goes. The <code>if</code> guard is so that when <code>~/.bashrc</code> is run again on a compute node, it doesn’t create tmux-ception.</p>
-<h1 id="the-mobile-shell">The mobile shell</h1>
-<p>Now comes the next major problem. <em>SSH</em>. The problem with SSH is that if it disconnects it won’t reconnect back automatically. It simply hangs. Also, when you SSH, the shell waits for response to come back to echo the result of what you entered. The slowness here is extremely disruptive while developing or running something on the server. To overcome some of this and build resilience to connection disruptions we will discard SSH in favour of <a href="https://mosh.org/">Mosh</a> or the Mobile Shell.</p>
-<p>The thing is, you need mosh installed at the server. On atom/cosmos, I had been root - so I can install mosh on every node I want with one command and ansible. On ada, I have enough pull to get the HPC admin to install it for me. At NAVER, this was not the case - and I installed a local version of mosh myself and configured it. A rough procedure to accomplish something similar is described below.</p>
-<h2 id="configuring-own-install.">Configuring own install.</h2>
-<p>I am not going to go in detail, but the same <code>configure</code>, <code>make</code> and <code>make-install</code> routine can get mosh in your local folder. But by default, mosh doesn’t look for a local mosh installation or doesn’t assume the path where it is installed. In this case</p>
-<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># fill remote home below.</span>
-<span class="co"># In case of ada - this would be /home/$USER/.local</span>
-<span class="va">HOME=</span>... 
-
-<span class="co"># Launch mosh specifying location of where the mosh-server is installed.</span>
-<span class="ex">mosh</span> --server=<span class="va">$HOME</span>/.local/bin/mosh-server <span class="op">&lt;</span>user<span class="op">&gt;</span>@<span class="op">&lt;</span>server-host<span class="op">&gt;</span></code></pre></div>
-<h1 id="local-edits-are-always-more-convenient.">Local edits are always more convenient.</h1>
-<p>You might think with all the above in space, you are really good to go. While mosh gives you local-echo and connection drop resilience, it still disconnects and disrupts your workflow. Have a look at <a href="https://heeris.id.au/trinkets/ProgrammerInterrupted.png">this comic</a>, which is relatable in the context.</p>
-<p><a class="btn btn-secondary" data-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample"> Why you shouldn’t interrupt a programmer. </a></p>
-<div id="collapseExample" class="collapse">
-<div class="card card-body">
-<p><img src="https://heeris.id.au/trinkets/ProgrammerInterrupted.png" alt="Why you shouldn't interrupt a programmer?"></p>
-</div>
-</div>
-<p>
-</p>
-<p>The network part is still a blocking-bottleneck and a point of failure. I believe it’s fairly obvious that it is best to make edits and run locally. However, my personal machine which I optimized for portability barely has the power to run the demanding jobs I run. Editing the text source files which are run-eventually, any tiny machine can - even your android phone!</p>
-<p>How I manage the changes consistently across different servers, and my personal machine which I use for edits is git. Any version control system with a central remote you can pull to make everything consistent works.</p>
-<h2 id="bringing-git-into-the-workflow">Bringing git into the workflow…</h2>
-<p>To enhance the workflow one more level further, I would recommend editing code through a git enabled repository which can sync at the server through a simple <code>git-pull</code>. This ensures your edits are visible as you make them and only running the command is what is dependent on the server.</p>
-<ol style="list-style-type: decimal">
-<li>Create an edit branch and sneak <code>git-pull</code>s into a build/run file at the server.</li>
-<li>The point where you get a working version of the source, merge the branch as one commit to the main code to avoid polluting commit history.</li>
-</ol>
-<h1 id="on-phone-juicessh">On Phone: JuiceSSH</h1>
-<p>One might not always have a laptop with Windows 10 and WSL, or Ubuntu running while travelling. This was the case at times when I was volunteering as CVIT sys-admin, and while I had been travelling in France. Sadly, there is no mosh for mobile, but I have find JuiceSSH to be decent enough for quick tasks. If you enable the auto-attaching tmux sessions, JuiceSSH can be used with minimum disruptions to occassionally check on your jobs and maybe edit if necessary to tiny degrees.JuiceSSH is available for install on the Google Play Store.</p>
-<ul>
-<li><a href="https://play.google.com/store/apps/details?id=com.sonelli.juicessh&amp;hl=en_IN">Google Play Store: JuiceSSH</a></li>
-</ul>
-<p>There are other alternatives as well, but JuiceSSH is what I like. Soon, I think I might even end up paying for the premium features the developer provides.</p>
-<h1 id="sharing-text">Sharing Text</h1>
-<p>Often, I end up in a situation where I have to share text generated in these servers to another place (maybe my local machine, maybe to share results with a colleague). The issue with the above setup is that often, these outputs can’t be copy-pasted using mouse (as the terminal-mosh-tmux-server intermediates will lose the clipboard).</p>
-<h2 id="pastebin-services">Pastebin services</h2>
-<p>What I rely on is a command-line paste-service. I used to use <a href="http://ptpb.pw">ptpb.pw</a>. However, this service has gone down since then due to abuse. Of late, I have stuck to <a href="http://ix.io">ix.io</a>. It even offers a user through <code>.netrc</code> based login, which is not very safe but I have been a happy user of. I have found this service satisfactory enough for now. You can substitute for the same with any paste-provider with a command line service. I will point to the possibilities opened by such a service and leave for you to google for the rest.</p>
-<h1 id="epilogue">Epilogue</h1>
-<p>This post was drafted on a TGV with the onboard WiFi, as I’m not sure how otherwise to kill time on a 4.5 hour trip to Paris from Toulouse. I have wrapped up my 6-month internship at NAVER LABS Europe, stayed a month with Phani while attempting a UK Visa, which has unfortunately failed. From Paris, I’m hoping I can take the Vande Bharat (CDG - DEL - COK), to arrive home in about 48 hours of travel.</p>
-<p>Forgive any typos or errors, and please be kind-enough to point them out so I can correct if they exist. If you know better methods to stay connected and edit code, run them on servers, please do let me know in comments below.</p></div>
 </div>
 
 
