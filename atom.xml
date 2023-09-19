@@ -79,8 +79,8 @@
 <li><a href="#console">Console</a></li>
 <li><a href="#display">Display</a></li>
 <li><a href="#reverse-tethering">Reverse Tethering</a></li>
-</ul></li>
 <li><a href="#desktop-environment">Desktop Environment</a></li>
+</ul></li>
 <li><a href="#thoughts-and-next-steps">Thoughts and next steps</a></li>
 <li><a href="#acknowledgements">Acknowledgements</a></li>
 </ul></div><div class="col-md-8 col-sm-12 post-content order-md-first"><p>A week ago, from what was originally started as some minor smartphone hacking, I started going down the rabbit-hole of PostmarketOS porting.</p>
@@ -239,7 +239,7 @@ $ <span class="ex">pmbootstrap</span> flasher flash_kernel
 <span class="ex">iptables</span> -A FORWARD -s 172.16.42.0/24 -j ACCEPT
 <span class="ex">iptables</span> -A POSTROUTING -t nat -j MASQUERADE -s 172.16.42.0/24
 <span class="ex">iptables-save</span> </code></pre></div>
-<h2 id="desktop-environment">Desktop Environment</h2>
+<h3 id="desktop-environment">Desktop Environment</h3>
 <p>With this, I had internet, and could try and swap out Desktop Environments without having to flash over and over again. One could use <a href="https://wiki.postmarketos.org/wiki/Category:Interface">Category:Interfaces</a> as a start-point. Quick status updates on these are:</p>
 <ul>
 <li>GNOME Mobile: fail</li>
