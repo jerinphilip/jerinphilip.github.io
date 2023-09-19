@@ -173,7 +173,7 @@ $ <span class="ex">pmbootstrap</span> flasher flash_kernel
 <span class="co"># [26685.836254] usb 1-3: Product: Xiaomi Redmi 6</span>
 <span class="co"># [26685.836258] usb 1-3: Manufacturer: Xiaomi</span>
 <span class="co"># [26685.836261] usb 1-3: SerialNumber: postmarketOS</span></code></pre></div>
-<p>Since <code>SerialNumber: postmarketOS</code> appeared, this meant the device had booted. However, my laptops kernel was failing to detect it as a USB tethering device.</p>
+<p>Since <code>SerialNumber: postmarketOS</code> appeared, this meant the device had booted. However, my laptop’s kernel was failing to detect it as a USB tethering device.</p>
 <h3 id="usb-ethernet-troubles">USB Ethernet troubles</h3>
 <p>For some reason, my laptop was not recognizing it as an RNDIS host. RNDIS host is a term associated with when a phone is connected to the computer and internet and the computer uses internet via phone - a more popular term is <em>USB Tethering</em>. Except in our case, there was no internet, this was just a local network from the phone so that we could drop into an SSH shell within the phone.</p>
 <p>Initially I thought this issue was due to me manipulating <a href="https://github.com/bkerler/mtkclient/tree/c6389116d84a36ad33c95a3284d9311ec8fc5dfa/Setup/Linux">udev rules</a> for <a href="https://github.com/bkerler/mtkclient">mtkclient</a>. However, I noticed RNDIS recognition was working on my Desktop (<code>linux-6.4.x</code>) but not on my Laptop (<code>linux-6.1.x-lts</code>). The ArchLinux channel suggested upgrading kernel, which I did - and things were working from my laptop.</p>
@@ -223,8 +223,8 @@ $ <span class="ex">pmbootstrap</span> flasher flash_kernel
 </ul>
 <p>I was ignoring content despite the headline because <code>msm</code> (Qualcomm?), but this was actually generic. Applying the fix fixed my display problem.</p>
 <h3 id="reverse-tethering">Reverse Tethering</h3>
-<p>I hoped WiFi would work so I won’t have to stay tethered to the Laptop, but the WiFi situation is pretty bad. <a href="https://wiki.postmarketos.org/wiki/USB_Internet">Reverse Tethering</a> - in my case, using laptop’s connection by the phone through the tether was turning out to be the easy option:</p>
-<p>On the phone (guest), the the instructions are to issue the following.</p>
+<p>I hoped WiFi would work so I won’t have to stay tethered to the Laptop, but the WiFi situation is pretty bad. <a href="https://wiki.postmarketos.org/wiki/USB_Internet">Reverse Tethering</a> - in my case, using laptop’s connection by the phone through the tether was turning out to be the easy option.</p>
+<p>On the phone (guest), the instructions are to issue the following.</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">route</span> add default gw 172.16.42.2
 
 <span class="co"># Make the above change permanent.</span>
@@ -264,9 +264,9 @@ $ <span class="ex">pmbootstrap</span> flasher flash_kernel
 </div>
 <h2 id="thoughts-and-next-steps">Thoughts and next steps</h2>
 <p>While android is still running Linux under the hood, pure Linux on the phone still has a long way to go. It’s really hard to support the fragmented space of devices, if I were to guess why. Most drivers for specialized hardware is in android userland and proprietary - to the point reverse engineering is the favourable option. It will be a while before Linux on the phone takes off. Even if it happens, it’s unlikely the ecosystem of apps that exists on Apple or Android or Windows can be matched.</p>
-<p>I’m not sure if there’s much to gain by mainlining kernels for old phones at this stage, but poking in this space, contributing one or the other small patches at the bare minimum scratches an itch to hack and tinker. I have initialized a wiki-page for my phone - <a href="https://wiki.postmarketos.org/wiki/Xiaomi_Redmi_6_(xiaomi-cereus)">Xiaomi_Redmi_6_(xiaomi-cereus)</a>. I have the pmports diff ready at <a href="https://github.com/jerinphilip/pmaports/pull/1">jerinphilip/pmaports#1</a>, and will slowly work towards getting the port into the main repository and in time hopefully further features working.</p>
+<p>I’m not sure if there’s much to gain by mainlining kernels for old phones at this stage, but poking in this space, contributing one or the other small patches at the bare minimum scratches an itch to hack and tinker. I have initialized a wiki-page for my phone - <a href="https://wiki.postmarketos.org/wiki/Xiaomi_Redmi_6_(xiaomi-cereus)">Xiaomi_Redmi_6_(xiaomi-cereus)</a>. I have the pmaports diff ready at <a href="https://github.com/jerinphilip/pmaports/pull/1">jerinphilip/pmaports#1</a>, and will slowly work towards getting the port into the main repository and in time hopefully further features working.</p>
 <h2 id="acknowledgements">Acknowledgements</h2>
-<p>Two PostmarketOS developers/enthusiasts - <a href="https://mstdn.social/@justsoup">@justsoup</a> and <a href="https://mastodon.social/@hexaheximal">@hexaheximal</a> helped a lot during the course of porting. It’s unlikely I would have made progress as fast as I could without these two. I plan to contribute to some efforts of mainlining MT6765 series of chips.</p></div>
+<p>Two PostmarketOS developers/enthusiasts - <a href="https://mstdn.social/@justsoup">@justsoup</a> and <a href="https://mastodon.social/@hexaheximal">@hexaheximal</a> helped a lot during the course of porting. It’s unlikely I would have made progress as fast as I could without these two. I plan to contribute to some their efforts of mainlining MT6765 series of chips.</p></div>
 </div>
 
 
